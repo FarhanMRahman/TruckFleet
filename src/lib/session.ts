@@ -1,35 +1,51 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import type { UserRole } from "@/lib/schema";
 
 /**
  * Protected routes that require authentication.
- * These are also configured in src/proxy.ts for optimistic redirects.
  */
-export const protectedRoutes = ["/chat", "/dashboard", "/profile"];
+export const protectedRoutes = [
+  "/dashboard",
+  "/admin",
+  "/dispatch",
+  "/driver",
+  "/profile",
+];
 
 /**
  * Checks if the current request is authenticated.
- * Should be called in Server Components for protected routes.
- *
- * @returns The session object if authenticated
- * @throws Redirects to home page if not authenticated
+ * Redirects to /login if not authenticated.
  */
 export async function requireAuth() {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
-    redirect("/");
+    redirect("/login");
   }
 
   return session;
 }
 
 /**
+ * Checks authentication and enforces role access.
+ * Redirects to /dashboard (role router) if the user's role is not allowed.
+ */
+export async function requireRole(allowedRoles: UserRole[]) {
+  const session = await requireAuth();
+  const role = (session.user as { role?: string }).role as UserRole | undefined;
+
+  if (!role || !allowedRoles.includes(role)) {
+    redirect("/dashboard");
+  }
+
+  return { session, role };
+}
+
+/**
  * Gets the current session without requiring authentication.
  * Returns null if not authenticated.
- *
- * @returns The session object or null
  */
 export async function getOptionalSession() {
   return await auth.api.getSession({ headers: await headers() });
@@ -37,9 +53,6 @@ export async function getOptionalSession() {
 
 /**
  * Checks if a given path is a protected route.
- *
- * @param path - The path to check
- * @returns True if the path requires authentication
  */
 export function isProtectedRoute(path: string): boolean {
   return protectedRoutes.some(

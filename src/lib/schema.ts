@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 
 // IMPORTANT! ID fields should ALWAYS use UUID types, EXCEPT the BetterAuth tables.
 
+// ─── BetterAuth core tables ───────────────────────────────────────────────────
 
 export const user = pgTable(
   "user",
@@ -11,6 +12,8 @@ export const user = pgTable(
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
+    // TruckFleet: role for access control
+    role: text("role").default("driver"), // admin | dispatcher | driver
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -80,3 +83,110 @@ export const verification = pgTable("verification", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+// ─── TruckFleet domain tables ─────────────────────────────────────────────────
+
+export const trucks = pgTable(
+  "trucks",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    plate: text("plate").notNull().unique(),
+    // e.g. "flatbed" | "tanker" | "hazmat" | "refrigerated"
+    type: text("type").notNull(),
+    // "available" | "on_trip" | "maintenance" | "inactive"
+    status: text("status").notNull().default("available"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("trucks_status_idx").on(table.status)]
+);
+
+export const drivers = pgTable(
+  "drivers",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    licenseNumber: text("license_number").notNull(),
+    // Array of certification codes, e.g. ["hazmat", "twic", "tanker"]
+    certifications: text("certifications").array().notNull().default([]),
+    // "available" | "on_shift" | "driving" | "delivering" | "off_duty"
+    status: text("status").notNull().default("available"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("drivers_user_id_idx").on(table.userId)]
+);
+
+export const chemicalLoads = pgTable(
+  "chemical_loads",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    // DOT hazard class, e.g. "Class 3 - Flammable Liquids"
+    hazardClass: text("hazard_class").notNull(),
+    // UN identification number, e.g. "UN1203"
+    unNumber: text("un_number"),
+    // Required truck type for this chemical
+    requiredVehicleType: text("required_vehicle_type").notNull(),
+    // Required driver certifications, e.g. ["hazmat", "tanker"]
+    requiredCertifications: text("required_certifications").array().notNull().default([]),
+    handlingNotes: text("handling_notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  }
+);
+
+export const trips = pgTable(
+  "trips",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    truckId: text("truck_id").references(() => trucks.id),
+    driverId: text("driver_id").references(() => drivers.id),
+    loadId: text("load_id").references(() => chemicalLoads.id),
+    // "draft" | "assigned" | "in_progress" | "delivered" | "cancelled"
+    status: text("status").notNull().default("draft"),
+    origin: text("origin").notNull(),
+    destination: text("destination").notNull(),
+    scheduledAt: timestamp("scheduled_at"),
+    startedAt: timestamp("started_at"),
+    deliveredAt: timestamp("delivered_at"),
+    notes: text("notes"),
+    createdBy: text("created_by").references(() => user.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("trips_status_idx").on(table.status),
+    index("trips_driver_id_idx").on(table.driverId),
+    index("trips_truck_id_idx").on(table.truckId),
+  ]
+);
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type User = typeof user.$inferSelect;
+export type Truck = typeof trucks.$inferSelect;
+export type Driver = typeof drivers.$inferSelect;
+export type ChemicalLoad = typeof chemicalLoads.$inferSelect;
+export type Trip = typeof trips.$inferSelect;
+
+export type UserRole = "admin" | "dispatcher" | "driver";
+export type TruckStatus = "available" | "on_trip" | "maintenance" | "inactive";
+export type DriverStatus = "available" | "on_shift" | "driving" | "delivering" | "off_duty";
+export type TripStatus = "draft" | "assigned" | "in_progress" | "delivered" | "cancelled";

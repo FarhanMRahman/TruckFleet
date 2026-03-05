@@ -18,60 +18,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Agentic Coding Boilerplate",
-    template: "%s | Agentic Coding Boilerplate",
+    default: "TruckFleet",
+    template: "%s | TruckFleet",
   },
   description:
-    "Complete agentic coding boilerplate with authentication, database, AI integration, and modern tooling - perfect for building AI-powered applications and autonomous agents by Leon van Zyl",
+    "Fleet management and dispatch platform for chemical and hazardous material transport.",
   keywords: [
-    "Next.js",
-    "React",
-    "TypeScript",
-    "AI",
-    "OpenRouter",
-    "Boilerplate",
-    "Authentication",
-    "PostgreSQL",
+    "trucking",
+    "fleet management",
+    "dispatch",
+    "logistics",
+    "hazmat",
+    "chemical transport",
   ],
-  authors: [{ name: "Leon van Zyl" }],
-  creator: "Leon van Zyl",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    siteName: "Agentic Coding Boilerplate",
-    title: "Agentic Coding Boilerplate",
-    description:
-      "Complete agentic coding boilerplate with authentication, database, AI integration, and modern tooling",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Agentic Coding Boilerplate",
-    description:
-      "Complete agentic coding boilerplate with authentication, database, AI integration, and modern tooling",
-  },
   robots: {
-    index: true,
-    follow: true,
-  },
-};
-
-// JSON-LD structured data for SEO
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "Agentic Coding Boilerplate",
-  description:
-    "Complete agentic coding boilerplate with authentication, database, AI integration, and modern tooling",
-  applicationCategory: "DeveloperApplication",
-  operatingSystem: "Any",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
-  },
-  author: {
-    "@type": "Person",
-    name: "Leon van Zyl",
+    index: false,
+    follow: false,
   },
 };
 
@@ -82,12 +44,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
