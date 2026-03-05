@@ -1,5 +1,5 @@
 {
-  "name": "agentic-coding-starter-kit",
+  "name": "truckfleet",
   "version": "1.1.2",
   "scripts": {
     "dev": "next dev --turbopack",
@@ -18,10 +18,12 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:dev": "drizzle-kit push",
-    "db:reset": "drizzle-kit drop && drizzle-kit push"
+    "db:reset": "drizzle-kit drop && drizzle-kit push",
+    "db:seed": "tsx --env-file=.env scripts/seed.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.125",
+    "@better-auth/drizzle-adapter": "^1.5.3",
     "@openrouter/ai-sdk-provider": "^1.5.4",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
