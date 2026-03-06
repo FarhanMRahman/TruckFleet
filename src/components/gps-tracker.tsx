@@ -45,12 +45,11 @@ export function GpsTracker({ active }: Props) {
   useEffect(() => {
     if (!active) {
       if (intervalRef.current) clearInterval(intervalRef.current)
-      setStatus("idle")
       return
     }
 
-    sendLocation()
-    intervalRef.current = setInterval(sendLocation, INTERVAL_MS)
+    void sendLocation()
+    intervalRef.current = setInterval(() => { void sendLocation() }, INTERVAL_MS)
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
