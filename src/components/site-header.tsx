@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Truck } from "lucide-react";
 import { UserProfile } from "@/components/auth/user-profile";
 import { ModeToggle } from "./ui/mode-toggle";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 export function SiteHeader() {
   return (
@@ -35,7 +36,8 @@ export function SiteHeader() {
               </span>
             </Link>
           </h1>
-          <div className="flex items-center gap-4" role="group" aria-label="User actions">
+          <div className="flex items-center gap-2" role="group" aria-label="User actions">
+            <NotificationsBell />
             <UserProfile />
             <ModeToggle />
           </div>
