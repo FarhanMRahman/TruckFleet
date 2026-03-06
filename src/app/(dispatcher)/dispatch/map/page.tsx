@@ -3,13 +3,7 @@ import { requireRole } from "@/lib/session"
 import { db } from "@/lib/db"
 import { truckLocations, trucks, drivers, trips, chemicalLoads, user } from "@/lib/schema"
 import { eq, desc, and, inArray, sql } from "drizzle-orm"
-import dynamic from "next/dynamic"
-
-// Leaflet requires the browser — disable SSR
-const FleetMap = dynamic(
-  () => import("@/components/fleet-map").then((m) => m.FleetMap),
-  { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-muted-foreground">Loading map…</div> }
-)
+import { FleetMapWrapper } from "@/components/fleet-map-wrapper"
 
 async function getLatestLocations(): Promise<TruckLocation[]> {
   const latestIds = db
@@ -73,7 +67,7 @@ export default async function MapPage() {
         </div>
       ) : (
         <div className="flex-1 px-4 pb-4">
-          <FleetMap initialLocations={initialLocations} />
+          <FleetMapWrapper initialLocations={initialLocations} />
         </div>
       )}
     </div>
