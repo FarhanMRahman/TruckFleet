@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
-import { MapPin, Package, CheckCircle, Clock, ChevronRight, Truck } from "lucide-react"
+import { MapPin, Package, CheckCircle, Clock, ChevronRight, Truck, Circle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type TripRow = {
   id: string
@@ -29,15 +35,23 @@ type HomeData = {
   stats: { completed: number; total: number }
 }
 
-const STATUS_STYLES: Record<string, string> = {
+const TRIP_STATUS_STYLES: Record<string, string> = {
   assigned: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   in_progress: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
 }
 
-const STATUS_LABELS: Record<string, string> = {
+const TRIP_STATUS_LABELS: Record<string, string> = {
   assigned: "Assigned",
   in_progress: "In Progress",
 }
+
+const DRIVER_STATUS_OPTIONS = [
+  { value: "available", label: "Available", color: "text-green-600" },
+  { value: "on_shift", label: "On Shift", color: "text-blue-600" },
+  { value: "driving", label: "Driving", color: "text-purple-600" },
+  { value: "delivering", label: "Delivering", color: "text-orange-500" },
+  { value: "off_duty", label: "Off Duty", color: "text-gray-500" },
+]
 
 function formatDate(iso: string | null) {
   if (!iso) return "—"
@@ -50,6 +64,7 @@ function formatDate(iso: string | null) {
 export default function DriverHomePage() {
   const [data, setData] = useState<HomeData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
     fetch("/api/driver/home")
@@ -58,6 +73,24 @@ export default function DriverHomePage() {
       .catch(() => toast.error("Failed to load your trips"))
       .finally(() => setLoading(false))
   }, [])
+
+  async function updateDriverStatus(status: string) {
+    setUpdatingStatus(true)
+    try {
+      const res = await fetch("/api/driver/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error()
+      setData((prev) => prev ? { ...prev, driverProfile: prev.driverProfile ? { ...prev.driverProfile, status } : null } : prev)
+      toast.success(`Status updated to ${DRIVER_STATUS_OPTIONS.find((s) => s.value === status)?.label}`)
+    } catch {
+      toast.error("Failed to update status")
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
 
   if (loading) {
     return <div className="p-4 text-center text-muted-foreground pt-16">Loading...</div>
@@ -72,6 +105,34 @@ export default function DriverHomePage() {
         <h1 className="text-2xl font-bold">My Trips</h1>
         <p className="text-muted-foreground text-sm mt-0.5">Here&apos;s your day at a glance.</p>
       </div>
+
+      {/* Driver status selector */}
+      {driverProfile && (() => {
+        const current = DRIVER_STATUS_OPTIONS.find((s) => s.value === driverProfile.status)
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={updatingStatus} className="gap-2">
+                <Circle className={`h-2.5 w-2.5 fill-current ${current?.color ?? ""}`} />
+                {current?.label ?? driverProfile.status}
+                <span className="text-xs text-muted-foreground ml-1">· My Status</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {DRIVER_STATUS_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => updateDriverStatus(opt.value)}
+                  className={`gap-2 ${opt.value === driverProfile.status ? "font-semibold" : ""}`}
+                >
+                  <Circle className={`h-2.5 w-2.5 fill-current ${opt.color}`} />
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      })()}
 
       {/* No driver profile */}
       {!driverProfile && (
@@ -95,8 +156,8 @@ export default function DriverHomePage() {
                     <Badge variant="outline" className="text-xs">Class {activeTrip.loadHazardClass}</Badge>
                   )}
                 </div>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${STATUS_STYLES[activeTrip.status] ?? ""}`}>
-                  {STATUS_LABELS[activeTrip.status] ?? activeTrip.status}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${TRIP_STATUS_STYLES[activeTrip.status] ?? ""}`}>
+                  {TRIP_STATUS_LABELS[activeTrip.status] ?? activeTrip.status}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">

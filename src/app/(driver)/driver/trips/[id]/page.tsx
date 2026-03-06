@@ -77,6 +77,7 @@ export default function TripDetailPage() {
   const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     fetch(`/api/driver/trips/${id}`)
@@ -91,6 +92,24 @@ export default function TripDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id, router])
+
+  async function updateTripStatus(status: "in_progress" | "delivered") {
+    setUpdating(true)
+    try {
+      const res = await fetch(`/api/driver/trips/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error()
+      setTrip((prev) => prev ? { ...prev, status, ...(status === "in_progress" ? { startedAt: new Date().toISOString() } : { deliveredAt: new Date().toISOString() }) } : prev)
+      toast.success(status === "in_progress" ? "Trip started!" : "Trip marked as delivered!")
+    } catch {
+      toast.error("Failed to update trip status")
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   if (loading) {
     return <div className="p-4 text-center text-muted-foreground pt-16">Loading...</div>
@@ -127,6 +146,26 @@ export default function TripDetailPage() {
         Open in Google Maps
         <ExternalLink className="h-3.5 w-3.5 opacity-70" />
       </a>
+
+      {/* Trip action buttons */}
+      {trip.status === "assigned" && (
+        <Button
+          className="w-full"
+          onClick={() => updateTripStatus("in_progress")}
+          disabled={updating}
+        >
+          {updating ? "Updating..." : "Start Trip"}
+        </Button>
+      )}
+      {trip.status === "in_progress" && (
+        <Button
+          className="w-full"
+          onClick={() => updateTripStatus("delivered")}
+          disabled={updating}
+        >
+          {updating ? "Updating..." : "Mark as Delivered"}
+        </Button>
+      )}
 
       {/* Route & Schedule */}
       <section className="border rounded-xl divide-y">
