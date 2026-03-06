@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TripMessageThread } from "@/components/trip-message-thread"
+import { GpsTracker } from "@/components/gps-tracker"
 
 type TripDetail = {
   id: string
@@ -256,6 +257,9 @@ export default function TripDetailPage() {
 
       {/* Messages */}
       {currentUserId && <TripMessageThread tripId={trip.id} currentUserId={currentUserId} />}
+
+      {/* GPS tracker — active while trip is assigned or in progress */}
+      <GpsTracker active={trip.status === "assigned" || trip.status === "in_progress"} />
     </div>
   )
 }

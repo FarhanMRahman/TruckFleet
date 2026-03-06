@@ -36,6 +36,13 @@
       "when": 1772770953481,
       "tag": "0004_bright_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772774076487,
+      "tag": "0005_vengeful_ares",
+      "breakpoints": true
     }
   ]
 }

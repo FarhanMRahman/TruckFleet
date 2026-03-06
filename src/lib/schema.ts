@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, doublePrecision } from "drizzle-orm/pg-core";
 
 // IMPORTANT! ID fields should ALWAYS use UUID types, EXCEPT the BetterAuth tables.
 
@@ -178,6 +178,27 @@ export const trips = pgTable(
   ]
 );
 
+export const truckLocations = pgTable(
+  "truck_locations",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    truckId: text("truck_id")
+      .notNull()
+      .references(() => trucks.id, { onDelete: "cascade" }),
+    driverId: text("driver_id")
+      .references(() => drivers.id, { onDelete: "set null" }),
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    heading: doublePrecision("heading"),
+    speed: doublePrecision("speed"), // km/h
+    recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("truck_locations_truck_id_idx").on(table.truckId),
+    index("truck_locations_recorded_at_idx").on(table.recordedAt),
+  ]
+)
+
 export const messages = pgTable(
   "messages",
   {
@@ -222,6 +243,7 @@ export type Driver = typeof drivers.$inferSelect;
 export type ChemicalLoad = typeof chemicalLoads.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 
+export type TruckLocation = typeof truckLocations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type UserRole = "admin" | "dispatcher" | "driver";
