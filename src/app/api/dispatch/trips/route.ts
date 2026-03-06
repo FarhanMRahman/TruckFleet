@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { trips, trucks, drivers, chemicalLoads, user } from "@/lib/schema"
+import { trips, trucks, drivers, chemicalLoads, notifications, user } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
 import { z } from "zod"
 import { desc, eq } from "drizzle-orm"
@@ -69,6 +69,26 @@ export async function POST(req: NextRequest) {
       status: "assigned",
       createdBy: session.user.id,
     }).returning()
+
+    // Notify the assigned driver
+    const [driverRow] = await db
+      .select({ userId: drivers.userId })
+      .from(drivers)
+      .where(eq(drivers.id, data.driverId))
+
+    if (driverRow) {
+      const [load] = await db
+        .select({ name: chemicalLoads.name })
+        .from(chemicalLoads)
+        .where(eq(chemicalLoads.id, data.loadId))
+
+      await db.insert(notifications).values({
+        userId: driverRow.userId,
+        type: "trip_assigned",
+        message: `You have been assigned a new trip: ${load?.name ?? "chemical load"} from ${data.origin} to ${data.destination}.`,
+        tripId: trip.id,
+      })
+    }
 
     return NextResponse.json(trip, { status: 201 })
   } catch (err) {

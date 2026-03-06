@@ -178,6 +178,25 @@ export const trips = pgTable(
   ]
 );
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // "trip_assigned" | "trip_updated" | "trip_cancelled"
+    message: text("message").notNull(),
+    tripId: text("trip_id").references(() => trips.id, { onDelete: "set null" }),
+    read: boolean("read").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("notifications_user_id_idx").on(table.userId),
+    index("notifications_read_idx").on(table.read),
+  ]
+)
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof user.$inferSelect;
@@ -186,6 +205,7 @@ export type Driver = typeof drivers.$inferSelect;
 export type ChemicalLoad = typeof chemicalLoads.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 
+export type Notification = typeof notifications.$inferSelect;
 export type UserRole = "admin" | "dispatcher" | "driver";
 export type TruckStatus = "available" | "on_trip" | "maintenance" | "inactive";
 export type DriverStatus = "available" | "on_shift" | "driving" | "delivering" | "off_duty";
