@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Plus, MapPin, ChevronDown } from "lucide-react"
+import Link from "next/link"
+import { Plus, MapPin, ChevronDown, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -209,6 +210,12 @@ export default function TripsPage() {
                     </span>
                   </TableCell>
                   <TableCell>
+                    <div className="flex items-center gap-1">
+                    <Button size="icon" variant="ghost" asChild title="Messages">
+                      <Link href={`/dispatch/trips/${trip.id}`}>
+                        <MessageSquare className="h-4 w-4" />
+                      </Link>
+                    </Button>
                     {NEXT_STATUSES[trip.status] ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -234,6 +241,7 @@ export default function TripsPage() {
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
