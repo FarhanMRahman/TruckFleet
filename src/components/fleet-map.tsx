@@ -71,10 +71,13 @@ export function FleetMap({ initialLocations }: Props) {
 
   // Initialise Leaflet map (client-side only)
   useEffect(() => {
-    if (mapRef.current || !containerRef.current) return
+    if (!containerRef.current) return
+    let cancelled = false
 
     // Dynamic import to avoid SSR issues
     import("leaflet").then((L) => {
+      if (cancelled || !containerRef.current || mapRef.current) return
+
       // Fix default icon paths broken by webpack
       delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
       L.Icon.Default.mergeOptions({
@@ -83,7 +86,7 @@ export function FleetMap({ initialLocations }: Props) {
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      const map = L.map(containerRef.current!).setView([39.8283, -98.5795], 4)
+      const map = L.map(containerRef.current).setView([39.8283, -98.5795], 4)
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map)
@@ -91,12 +94,9 @@ export function FleetMap({ initialLocations }: Props) {
     })
 
     return () => {
+      cancelled = true
       mapRef.current?.remove()
       mapRef.current = null
-      // Clear Leaflet's internal container flag so re-mount works (React StrictMode)
-      if (containerRef.current) {
-        (containerRef.current as unknown as Record<string, unknown>)._leaflet_id = undefined
-      }
     }
   }, [])
 
