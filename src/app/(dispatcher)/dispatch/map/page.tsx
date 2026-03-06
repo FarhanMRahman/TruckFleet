@@ -1,55 +1,10 @@
-import type { TruckLocation } from "@/components/fleet-map"
 import { requireRole } from "@/lib/session"
-import { db } from "@/lib/db"
-import { truckLocations, trucks, drivers, trips, chemicalLoads, user } from "@/lib/schema"
-import { eq, desc, and, inArray, sql } from "drizzle-orm"
+import { fetchLatestLocations } from "@/app/api/dispatch/locations/route"
 import { FleetMapWrapper } from "@/components/fleet-map-wrapper"
-
-async function getLatestLocations(): Promise<TruckLocation[]> {
-  const latestIds = db
-    .select({
-      id: sql<string>`DISTINCT ON (${truckLocations.truckId}) ${truckLocations.id}`,
-    })
-    .from(truckLocations)
-    .orderBy(truckLocations.truckId, desc(truckLocations.recordedAt))
-    .as("latest_ids")
-
-  return db
-    .select({
-      locationId: truckLocations.id,
-      lat: truckLocations.lat,
-      lng: truckLocations.lng,
-      heading: truckLocations.heading,
-      speed: truckLocations.speed,
-      recordedAt: truckLocations.recordedAt,
-      truckId: trucks.id,
-      truckName: trucks.name,
-      truckPlate: trucks.plate,
-      truckType: trucks.type,
-      truckStatus: trucks.status,
-      driverName: user.name,
-      tripStatus: trips.status,
-      loadName: chemicalLoads.name,
-      loadHazardClass: chemicalLoads.hazardClass,
-    })
-    .from(truckLocations)
-    .innerJoin(latestIds, eq(truckLocations.id, latestIds.id))
-    .innerJoin(trucks, eq(truckLocations.truckId, trucks.id))
-    .leftJoin(drivers, eq(truckLocations.driverId, drivers.id))
-    .leftJoin(user, eq(drivers.userId, user.id))
-    .leftJoin(
-      trips,
-      and(
-        eq(trips.truckId, trucks.id),
-        inArray(trips.status, ["assigned", "in_progress"])
-      )
-    )
-    .leftJoin(chemicalLoads, eq(trips.loadId, chemicalLoads.id))
-}
 
 export default async function MapPage() {
   await requireRole(["admin", "dispatcher"])
-  const initialLocations = await getLatestLocations()
+  const initialLocations = await fetchLatestLocations()
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
