@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaRegister } from "@/components/pwa-register";
 import type { Metadata } from "next";
 
 const geistSans = Geist({
@@ -35,6 +36,14 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "TruckFleet",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
@@ -53,6 +62,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <PwaRegister />
           <SiteHeader />
           <main id="main-content">{children}</main>
           <SiteFooter />
