@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { TripMessageThread } from "@/components/trip-message-thread"
 
 type TripDetail = {
   id: string
@@ -77,6 +78,13 @@ export default function TripDetailPage() {
   const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string>("")
+
+  useEffect(() => {
+    fetch("/api/auth/get-session").then((r) => r.json()).then((s) => {
+      if (s?.user?.id) setCurrentUserId(s.user.id)
+    })
+  }, [])
   const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
@@ -245,6 +253,9 @@ export default function TripDetailPage() {
           </div>
         </section>
       )}
+
+      {/* Messages */}
+      {currentUserId && <TripMessageThread tripId={trip.id} currentUserId={currentUserId} />}
     </div>
   )
 }

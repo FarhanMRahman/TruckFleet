@@ -178,6 +178,23 @@ export const trips = pgTable(
   ]
 );
 
+export const messages = pgTable(
+  "messages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    senderName: text("sender_name").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("messages_trip_id_idx").on(table.tripId)]
+)
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -205,6 +222,7 @@ export type Driver = typeof drivers.$inferSelect;
 export type ChemicalLoad = typeof chemicalLoads.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
 
+export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type UserRole = "admin" | "dispatcher" | "driver";
 export type TruckStatus = "available" | "on_trip" | "maintenance" | "inactive";

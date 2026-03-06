@@ -1,0 +1,136 @@
+"use client"
+
+import { useEffect, useRef, useState, useCallback } from "react"
+import { toast } from "sonner"
+import { Send, MessageSquare } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+
+type Message = {
+  id: string
+  senderId: string
+  senderName: string
+  content: string
+  createdAt: string
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+}
+
+interface Props {
+  tripId: string
+  currentUserId: string
+}
+
+export function TripMessageThread({ tripId, currentUserId }: Props) {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [content, setContent] = useState("")
+  const [sending, setSending] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/trips/${tripId}/messages`)
+      if (res.ok) {
+        const data = await res.json()
+        setMessages(data)
+      }
+    } catch {
+      // silently ignore poll failures
+    }
+  }, [tripId])
+
+  useEffect(() => {
+    fetchMessages()
+    const interval = setInterval(fetchMessages, 10000)
+    return () => clearInterval(interval)
+  }, [fetchMessages])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  async function sendMessage() {
+    if (!content.trim()) return
+    setSending(true)
+    try {
+      const res = await fetch(`/api/trips/${tripId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: content.trim() }),
+      })
+      if (!res.ok) throw new Error()
+      const msg = await res.json()
+      setMessages((prev) => [...prev, msg])
+      setContent("")
+    } catch {
+      toast.error("Failed to send message")
+    } finally {
+      setSending(false)
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  return (
+    <section className="border rounded-xl overflow-hidden">
+      <div className="p-3 border-b flex items-center gap-2 text-sm font-medium">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        Messages
+      </div>
+
+      {/* Message list */}
+      <div className="p-3 space-y-3 max-h-64 overflow-y-auto bg-muted/20">
+        {messages.length === 0 ? (
+          <p className="text-xs text-center text-muted-foreground py-4">
+            No messages yet. Start the conversation.
+          </p>
+        ) : (
+          messages.map((msg) => {
+            const isOwn = msg.senderId === currentUserId
+            return (
+              <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-background border rounded-bl-sm"}`}>
+                  {msg.content}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5 px-1">
+                  {!isOwn && <span className="font-medium">{msg.senderName} · </span>}
+                  {timeAgo(msg.createdAt)}
+                </p>
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-3 border-t flex gap-2">
+        <Textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message… (Enter to send)"
+          rows={1}
+          className="resize-none text-sm"
+          disabled={sending}
+        />
+        <Button size="icon" onClick={sendMessage} disabled={sending || !content.trim()}>
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+    </section>
+  )
+}
