@@ -93,6 +93,10 @@ export function FleetMap({ initialLocations }: Props) {
     return () => {
       mapRef.current?.remove()
       mapRef.current = null
+      // Clear Leaflet's internal container flag so re-mount works (React StrictMode)
+      if (containerRef.current) {
+        (containerRef.current as unknown as Record<string, unknown>)._leaflet_id = undefined
+      }
     }
   }, [])
 
