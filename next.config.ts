@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.0.14"],
+  allowedDevOrigins: ["192.168.0.14", "5e8e-73-182-153-238.ngrok-free.app"],
   // Image optimization configuration
   images: {
     remotePatterns: [
@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=()",
           },
         ],
       },

@@ -57,7 +57,7 @@ export function GpsTracker({ active }: Props) {
     }
   }, [active])
 
-  if (!active || status === "idle") return null
+  if (!active) return null
 
   return (
     <div className="fixed bottom-20 right-3 z-50">
