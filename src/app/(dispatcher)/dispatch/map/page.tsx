@@ -21,8 +21,10 @@ export default async function MapPage() {
           No truck locations yet. Drivers need an active trip with GPS enabled.
         </div>
       ) : (
-        <div className="flex-1 px-4 pb-4">
-          <FleetMapWrapper initialLocations={initialLocations} />
+        <div className="flex-1 min-h-0 px-4 pb-4">
+          <div className="h-full">
+            <FleetMapWrapper initialLocations={initialLocations} />
+          </div>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import type { Map as LeafletMap, Marker } from "leaflet"
+import type * as L from "leaflet"
 
 export type TruckLocation = {
   locationId: string
@@ -59,6 +60,58 @@ function popupHtml(loc: TruckLocation) {
   `
 }
 
+function applyMarkers(
+  Leaflet: typeof L,
+  map: LeafletMap,
+  markers: Map<string, Marker>,
+  locs: TruckLocation[]
+) {
+  const seen = new Set<string>()
+
+  for (const loc of locs) {
+    seen.add(loc.truckId)
+    const color = STATUS_COLOR[loc.tripStatus ?? loc.truckStatus ?? ""] ?? "#6b7280"
+
+    const icon = Leaflet.divIcon({
+      className: "",
+      html: `<div style="
+        width:32px;height:32px;border-radius:50%;
+        background:${color};border:3px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,.4);
+        display:flex;align-items:center;justify-content:center;
+        color:white;font-size:14px;font-weight:700
+      ">🚛</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -20],
+    })
+
+    if (markers.has(loc.truckId)) {
+      const marker = markers.get(loc.truckId)!
+      marker.setLatLng([loc.lat, loc.lng])
+      marker.setIcon(icon)
+      marker.setPopupContent(popupHtml(loc))
+    } else {
+      const marker = Leaflet.marker([loc.lat, loc.lng], { icon })
+        .addTo(map)
+        .bindPopup(popupHtml(loc))
+      markers.set(loc.truckId, marker)
+    }
+  }
+
+  for (const [truckId, marker] of markers) {
+    if (!seen.has(truckId)) {
+      marker.remove()
+      markers.delete(truckId)
+    }
+  }
+
+  if (locs.length > 0 && markers.size > 0) {
+    const group = Leaflet.featureGroup([...markers.values()])
+    map.fitBounds(group.getBounds().pad(0.2))
+  }
+}
+
 interface Props {
   initialLocations: TruckLocation[]
 }
@@ -67,101 +120,61 @@ export function FleetMap({ initialLocations }: Props) {
   const mapRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<Map<string, Marker>>(new Map())
   const containerRef = useRef<HTMLDivElement>(null)
+  const locationsRef = useRef<TruckLocation[]>(initialLocations)
   const [locations, setLocations] = useState<TruckLocation[]>(initialLocations)
 
-  // Initialise Leaflet map (client-side only)
+  // Keep locationsRef in sync so map init can read the latest value
+  locationsRef.current = locations
+
+  // Initialise Leaflet map, then immediately apply current locations
   useEffect(() => {
     if (!containerRef.current) return
     let cancelled = false
 
-    // Dynamic import to avoid SSR issues
-    import("leaflet").then((L) => {
+    import("leaflet").then((Leaflet) => {
       if (cancelled || !containerRef.current || mapRef.current) return
 
-      // Fix default icon paths broken by webpack
-      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
-      L.Icon.Default.mergeOptions({
+      delete (Leaflet.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
+      Leaflet.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      let map: InstanceType<typeof L.Map>
+      let map: LeafletMap
       try {
-        map = L.map(containerRef.current).setView([39.8283, -98.5795], 4)
+        map = Leaflet.map(containerRef.current).setView([39.8283, -98.5795], 4)
       } catch {
-        // Container already initialized (StrictMode double-invoke) — skip
         return
       }
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+
+      Leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map)
+
       mapRef.current = map
+
+      // Apply whatever locations are available right now
+      applyMarkers(Leaflet, map, markersRef.current, locationsRef.current)
     })
 
     return () => {
       cancelled = true
       mapRef.current?.remove()
       mapRef.current = null
+      markersRef.current.clear()
       if (containerRef.current) {
         delete (containerRef.current as unknown as Record<string, unknown>)._leaflet_id
       }
     }
   }, [])
 
-  // Update markers whenever locations change
+  // Update markers when SSE pushes new locations
   useEffect(() => {
     if (!mapRef.current) return
-
-    import("leaflet").then((L) => {
-      const map = mapRef.current!
-      const existing = markersRef.current
-      const seen = new Set<string>()
-
-      for (const loc of locations) {
-        seen.add(loc.truckId)
-        const color = STATUS_COLOR[loc.tripStatus ?? loc.truckStatus ?? ""] ?? "#6b7280"
-
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="
-            width:32px;height:32px;border-radius:50%;
-            background:${color};border:3px solid white;
-            box-shadow:0 2px 6px rgba(0,0,0,.4);
-            display:flex;align-items:center;justify-content:center;
-            color:white;font-size:14px;font-weight:700
-          ">🚛</div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          popupAnchor: [0, -20],
-        })
-
-        if (existing.has(loc.truckId)) {
-          const marker = existing.get(loc.truckId)!
-          marker.setLatLng([loc.lat, loc.lng])
-          marker.setIcon(icon)
-          marker.setPopupContent(popupHtml(loc))
-        } else {
-          const marker = L.marker([loc.lat, loc.lng], { icon })
-            .addTo(map)
-            .bindPopup(popupHtml(loc))
-          existing.set(loc.truckId, marker)
-        }
-      }
-
-      // Remove markers for trucks no longer in data
-      for (const [truckId, marker] of existing) {
-        if (!seen.has(truckId)) {
-          marker.remove()
-          existing.delete(truckId)
-        }
-      }
-
-      // Auto-fit map to all markers on first load
-      if (locations.length > 0 && existing.size > 0) {
-        const group = L.featureGroup([...existing.values()])
-        map.fitBounds(group.getBounds().pad(0.2))
-      }
+    import("leaflet").then((Leaflet) => {
+      if (!mapRef.current) return
+      applyMarkers(Leaflet, mapRef.current, markersRef.current, locations)
     })
   }, [locations])
 
@@ -170,7 +183,7 @@ export function FleetMap({ initialLocations }: Props) {
     const es = new EventSource("/api/dispatch/locations/stream")
     es.onmessage = (e) => {
       try {
-        setLocations(JSON.parse(e.data))
+        setLocations(JSON.parse(e.data) as TruckLocation[])
       } catch {
         // ignore parse errors
       }
