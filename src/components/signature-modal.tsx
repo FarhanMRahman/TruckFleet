@@ -134,12 +134,13 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="relative border-2 border-dashed rounded-lg overflow-hidden bg-white">
+          <div className="relative border-2 border-dashed rounded-lg overflow-hidden bg-white" style={{ colorScheme: "light" }}>
             <canvas
               ref={canvasRef}
               width={400}
               height={180}
               className="w-full touch-none cursor-crosshair"
+            style={{ colorScheme: "light" }}
               onMouseDown={startDraw}
               onMouseMove={draw}
               onMouseUp={endDraw}

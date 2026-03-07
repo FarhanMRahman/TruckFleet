@@ -192,14 +192,14 @@ export default function DriverHomePage() {
       {/* Stats */}
       {driverProfile && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="border rounded-lg p-4 space-y-1">
+          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block cursor-pointer">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Package className="h-3.5 w-3.5" />
               <span>Total Trips</span>
             </div>
             <p className="text-2xl font-bold">{stats?.total ?? 0}</p>
-          </div>
-          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block">
+          </Link>
+          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block cursor-pointer">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <CheckCircle className="h-3.5 w-3.5" />
               <span>Completed</span>
