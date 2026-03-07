@@ -118,7 +118,7 @@ export default function TripDetailPage() {
           }
         : prev
     )
-    if (newStatus === "delivered") setShowPod(true)
+    if (newStatus === "delivered") setTimeout(() => setShowPod(true), 300)
   }
 
   if (loading) {
