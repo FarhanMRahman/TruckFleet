@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { MapPin, Package, CheckCircle, Clock, ChevronRight, Truck, Circle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,7 @@ function formatDate(iso: string | null) {
 }
 
 export default function DriverHomePage() {
+  const router = useRouter()
   const [data, setData] = useState<HomeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingStatus, setUpdatingStatus] = useState(false)
@@ -192,20 +194,32 @@ export default function DriverHomePage() {
       {/* Stats */}
       {driverProfile && (
         <div className="grid grid-cols-2 gap-3">
-          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block cursor-pointer">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push("/driver/trips")}
+            onKeyDown={(e) => e.key === "Enter" && router.push("/driver/trips")}
+            className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 active:bg-muted/60 transition-colors cursor-pointer select-none"
+          >
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <Package className="h-3.5 w-3.5" />
               <span>Total Trips</span>
             </div>
             <p className="text-2xl font-bold">{stats?.total ?? 0}</p>
-          </Link>
-          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block cursor-pointer">
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push("/driver/trips")}
+            onKeyDown={(e) => e.key === "Enter" && router.push("/driver/trips")}
+            className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 active:bg-muted/60 transition-colors cursor-pointer select-none"
+          >
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <CheckCircle className="h-3.5 w-3.5" />
               <span>Completed</span>
             </div>
             <p className="text-2xl font-bold">{stats?.completed ?? 0}</p>
-          </Link>
+          </div>
         </div>
       )}
 

@@ -25,21 +25,25 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
   const [hasStrokes, setHasStrokes] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  function isDarkMode() {
+    return document.documentElement.classList.contains("dark")
+  }
+
   function initCanvas() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
-    ctx.fillStyle = "#ffffff"
+    ctx.fillStyle = isDarkMode() ? "#1c1c1e" : "#ffffff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
 
-  // Init canvas when modal opens
+  // Init canvas when modal opens — double-rAF + setTimeout for iOS Safari reliability
   useEffect(() => {
     if (open) {
       setHasStrokes(false)
-      // Use rAF to ensure canvas is mounted in the DOM before drawing
-      requestAnimationFrame(initCanvas)
+      requestAnimationFrame(() => requestAnimationFrame(initCanvas))
+      setTimeout(initCanvas, 80)
     }
   }, [open])
 
@@ -83,7 +87,7 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
     if (!pos) return
     ctx.lineWidth = 2.5
     ctx.lineCap = "round"
-    ctx.strokeStyle = "#000"
+    ctx.strokeStyle = isDarkMode() ? "#ffffff" : "#000000"
     ctx.lineTo(pos.x, pos.y)
     ctx.stroke()
     setHasStrokes(true)
@@ -103,7 +107,22 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
     if (!canvas || !hasStrokes) return
     setSubmitting(true)
     try {
-      const signatureDataUrl = canvas.toDataURL("image/png")
+      // Normalize to white background + dark strokes regardless of theme
+      let signatureDataUrl: string
+      if (isDarkMode()) {
+        const norm = document.createElement("canvas")
+        norm.width = canvas.width
+        norm.height = canvas.height
+        const nctx = norm.getContext("2d")!
+        nctx.fillStyle = "#ffffff"
+        nctx.fillRect(0, 0, norm.width, norm.height)
+        // Invert the dark canvas: draw it inverted via filter
+        nctx.filter = "invert(1)"
+        nctx.drawImage(canvas, 0, 0)
+        signatureDataUrl = norm.toDataURL("image/png")
+      } else {
+        signatureDataUrl = canvas.toDataURL("image/png")
+      }
       const res = await fetch(`/api/driver/trips/${tripId}/pod`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -134,13 +153,13 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="relative border-2 border-dashed rounded-lg overflow-hidden bg-white" style={{ colorScheme: "light" }}>
+          <div className="relative border-2 border-dashed rounded-lg overflow-hidden">
             <canvas
               ref={canvasRef}
               width={400}
               height={180}
               className="w-full touch-none cursor-crosshair"
-            style={{ colorScheme: "light" }}
+              style={{ display: "block" }}
               onMouseDown={startDraw}
               onMouseMove={draw}
               onMouseUp={endDraw}
