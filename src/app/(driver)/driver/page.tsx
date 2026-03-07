@@ -199,13 +199,13 @@ export default function DriverHomePage() {
             </div>
             <p className="text-2xl font-bold">{stats?.total ?? 0}</p>
           </div>
-          <div className="border rounded-lg p-4 space-y-1">
+          <Link href="/driver/trips" className="border rounded-lg p-4 space-y-1 hover:bg-muted/40 transition-colors block">
             <div className="flex items-center gap-2 text-muted-foreground text-xs">
               <CheckCircle className="h-3.5 w-3.5" />
               <span>Completed</span>
             </div>
             <p className="text-2xl font-bold">{stats?.completed ?? 0}</p>
-          </div>
+          </Link>
         </div>
       )}
 

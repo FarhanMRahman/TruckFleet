@@ -25,15 +25,21 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
   const [hasStrokes, setHasStrokes] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Clear canvas when modal opens
+  function initCanvas() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  // Init canvas when modal opens
   useEffect(() => {
     if (open) {
       setHasStrokes(false)
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      // Use rAF to ensure canvas is mounted in the DOM before drawing
+      requestAnimationFrame(initCanvas)
     }
   }, [open])
 
@@ -88,11 +94,7 @@ export function SignatureModal({ open, onClose, tripId, onComplete }: Props) {
   }
 
   function clearCanvas() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    initCanvas()
     setHasStrokes(false)
   }
 
