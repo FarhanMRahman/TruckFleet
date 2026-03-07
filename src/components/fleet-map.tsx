@@ -86,7 +86,13 @@ export function FleetMap({ initialLocations }: Props) {
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
-      const map = L.map(containerRef.current).setView([39.8283, -98.5795], 4)
+      let map: InstanceType<typeof L.Map>
+      try {
+        map = L.map(containerRef.current).setView([39.8283, -98.5795], 4)
+      } catch {
+        // Container already initialized (StrictMode double-invoke) — skip
+        return
+      }
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map)
