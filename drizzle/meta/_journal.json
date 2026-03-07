@@ -43,6 +43,13 @@
       "when": 1772774076487,
       "tag": "0005_vengeful_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772857243240,
+      "tag": "0006_stale_energizer",
+      "breakpoints": true
     }
   ]
 }

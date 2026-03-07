@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TripMessageThread } from "@/components/trip-message-thread"
 import { GpsTracker } from "@/components/gps-tracker"
+import { InspectionChecklistModal } from "@/components/inspection-checklist-modal"
 
 type TripDetail = {
   id: string
@@ -85,7 +86,7 @@ export default function TripDetailPage() {
       if (s?.user?.id) setCurrentUserId(s.user.id)
     })
   }, [])
-  const [updating, setUpdating] = useState(false)
+  const [inspectionModal, setInspectionModal] = useState<"pre" | "post" | null>(null)
 
   useEffect(() => {
     fetch(`/api/driver/trips/${id}`)
@@ -101,22 +102,18 @@ export default function TripDetailPage() {
       .finally(() => setLoading(false))
   }, [id, router])
 
-  async function updateTripStatus(status: "in_progress" | "delivered") {
-    setUpdating(true)
-    try {
-      const res = await fetch(`/api/driver/trips/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      })
-      if (!res.ok) throw new Error()
-      setTrip((prev) => prev ? { ...prev, status, ...(status === "in_progress" ? { startedAt: new Date().toISOString() } : { deliveredAt: new Date().toISOString() }) } : prev)
-      toast.success(status === "in_progress" ? "Trip started!" : "Trip marked as delivered!")
-    } catch {
-      toast.error("Failed to update trip status")
-    } finally {
-      setUpdating(false)
-    }
+  function handleInspectionComplete(newStatus: "in_progress" | "delivered") {
+    setTrip((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: newStatus,
+            ...(newStatus === "in_progress"
+              ? { startedAt: new Date().toISOString() }
+              : { deliveredAt: new Date().toISOString() }),
+          }
+        : prev
+    )
   }
 
   if (loading) {
@@ -159,20 +156,31 @@ export default function TripDetailPage() {
       {trip.status === "assigned" && (
         <Button
           className="w-full"
-          onClick={() => updateTripStatus("in_progress")}
-          disabled={updating}
+          onClick={() => setInspectionModal("pre")}
+          disabled={false}
         >
-          {updating ? "Updating..." : "Start Trip"}
+          Start Trip
         </Button>
       )}
       {trip.status === "in_progress" && (
         <Button
           className="w-full"
-          onClick={() => updateTripStatus("delivered")}
-          disabled={updating}
+          onClick={() => setInspectionModal("post")}
+          disabled={false}
         >
-          {updating ? "Updating..." : "Mark as Delivered"}
+          Mark as Delivered
         </Button>
+      )}
+
+      {/* Inspection checklist modals */}
+      {inspectionModal && trip && (
+        <InspectionChecklistModal
+          open
+          type={inspectionModal}
+          tripId={trip.id}
+          onComplete={handleInspectionComplete}
+          onClose={() => setInspectionModal(null)}
+        />
       )}
 
       {/* Route & Schedule */}

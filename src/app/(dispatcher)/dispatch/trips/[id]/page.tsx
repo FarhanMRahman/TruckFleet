@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { MapPin, Truck, Clock, ChevronLeft, ShieldAlert, FileText, Users } from "lucide-react"
+import { MapPin, Truck, Clock, ChevronLeft, ShieldAlert, FileText, Users, ClipboardCheck, ClipboardX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TripMessageThread } from "@/components/trip-message-thread"
@@ -51,12 +51,17 @@ function formatDate(iso: string | null) {
   })
 }
 
+type InspectionItem = { item: string; checked: boolean }
+type Inspection = { type: string; items: InspectionItem[]; completedAt: string } | null
+type Inspections = { pre: Inspection; post: Inspection }
+
 export default function DispatchTripDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>("")
+  const [inspections, setInspections] = useState<Inspections>({ pre: null, post: null })
 
   useEffect(() => {
     fetch("/api/auth/get-session").then((r) => r.json()).then((s) => {
@@ -65,13 +70,15 @@ export default function DispatchTripDetailPage() {
   }, [])
 
   useEffect(() => {
-    // Re-use the dispatch trips list API and find by id, or use a dedicated endpoint
-    fetch("/api/dispatch/trips")
-      .then((r) => r.json())
-      .then((rows: TripDetail[]) => {
+    Promise.all([
+      fetch("/api/dispatch/trips").then((r) => r.json()),
+      fetch(`/api/dispatch/trips/${id}/inspections`).then((r) => r.json()),
+    ])
+      .then(([rows, insp]: [TripDetail[], Inspections]) => {
         const found = rows.find((t) => t.id === id)
         if (!found) { toast.error("Trip not found"); router.push("/dispatch/trips") }
         else setTrip(found)
+        setInspections(insp)
       })
       .catch(() => { toast.error("Failed to load trip"); router.push("/dispatch/trips") })
       .finally(() => setLoading(false))
@@ -159,6 +166,38 @@ export default function DispatchTripDetailPage() {
           </div>
         )}
       </section>
+
+      {/* Inspections */}
+      {(trip.status === "in_progress" || trip.status === "delivered") && (
+        <section className="border rounded-xl divide-y">
+          <div className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              Inspection Checklists
+            </p>
+            <div className="space-y-2">
+              {(["pre", "post"] as const).map((type) => {
+                const insp = inspections[type]
+                const label = type === "pre" ? "Pre-Trip" : "Post-Trip"
+                return (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm">
+                      {insp
+                        ? <ClipboardCheck className="h-4 w-4 text-green-500" />
+                        : <ClipboardX className="h-4 w-4 text-muted-foreground" />
+                      }
+                      <span className={insp ? "font-medium" : "text-muted-foreground"}>{label}</span>
+                    </div>
+                    {insp
+                      ? <span className="text-xs text-muted-foreground">{new Date(insp.completedAt).toLocaleString()}</span>
+                      : <Badge variant="outline" className="text-xs">Pending</Badge>
+                    }
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Messages */}
       {currentUserId && <TripMessageThread tripId={trip.id} currentUserId={currentUserId} />}
