@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,7 +32,21 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
+function getLink(n: Notification, pathname: string): string | null {
+  const isDriver = pathname.startsWith("/driver")
+  if (n.type === "trip_assigned" || n.type === "trip_updated" || n.type === "trip_cancelled") {
+    if (!n.tripId) return null
+    return isDriver ? `/driver/trips/${n.tripId}` : `/dispatch/trips/${n.tripId}`
+  }
+  if (n.type === "delay_alert") return n.tripId ? `/dispatch/trips/${n.tripId}` : "/dispatch/alerts"
+  if (n.type === "offline_alert") return "/dispatch/alerts"
+  if (n.type === "hos_warning") return "/dispatch/hos"
+  return null
+}
+
 export function NotificationsBell() {
+  const router = useRouter()
+  const pathname = usePathname()
   const [items, setItems] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
 
@@ -51,9 +66,16 @@ export function NotificationsBell() {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  async function markRead(id: string) {
-    await fetch(`/api/notifications/${id}/read`, { method: "PATCH" })
-    setItems((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n))
+  async function handleClick(n: Notification) {
+    if (!n.read) {
+      await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" })
+      setItems((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
+    }
+    const link = getLink(n, pathname)
+    if (link) {
+      setOpen(false)
+      router.push(link)
+    }
   }
 
   async function handleOpen(isOpen: boolean) {
@@ -92,7 +114,7 @@ export function NotificationsBell() {
             <DropdownMenuItem
               key={n.id}
               className={`flex flex-col items-start gap-1 p-3 cursor-pointer whitespace-normal ${!n.read ? "bg-muted/50" : ""}`}
-              onClick={() => !n.read && markRead(n.id)}
+              onClick={() => handleClick(n)}
             >
               <div className="flex items-start justify-between w-full gap-2">
                 <p className={`text-sm leading-snug ${!n.read ? "font-medium" : "text-muted-foreground"}`}>
