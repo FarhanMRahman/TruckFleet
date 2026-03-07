@@ -50,6 +50,13 @@
       "when": 1772857243240,
       "tag": "0006_stale_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772860072665,
+      "tag": "0007_spicy_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,23 @@
+import { NextResponse } from "next/server"
+import { eq } from "drizzle-orm"
+import { db } from "@/lib/db"
+import { proofOfDeliveries } from "@/lib/schema"
+import { requireRole } from "@/lib/session"
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await requireRole(["admin", "dispatcher"])
+    const { id: tripId } = await params
+    const [pod] = await db
+      .select()
+      .from(proofOfDeliveries)
+      .where(eq(proofOfDeliveries.tripId, tripId))
+      .limit(1)
+    return NextResponse.json({ pod: pod ?? null })
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+}

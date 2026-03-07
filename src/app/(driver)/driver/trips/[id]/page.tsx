@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { TripMessageThread } from "@/components/trip-message-thread"
 import { GpsTracker } from "@/components/gps-tracker"
 import { InspectionChecklistModal } from "@/components/inspection-checklist-modal"
+import { SignatureModal } from "@/components/signature-modal"
 
 type TripDetail = {
   id: string
@@ -80,6 +81,16 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [inspectionModal, setInspectionModal] = useState<"pre" | "post" | null>(null)
+  const [showPod, setShowPod] = useState(false)
+  const [podSigned, setPodSigned] = useState(false)
+
+  useEffect(() => {
+    if (!id) return
+    fetch(`/api/driver/trips/${id}/pod`)
+      .then((r) => r.json())
+      .then((d) => { if (d?.pod) setPodSigned(true) })
+      .catch(() => {})
+  }, [id])
 
   useEffect(() => {
     fetch(`/api/driver/trips/${id}`)
@@ -107,6 +118,7 @@ export default function TripDetailPage() {
           }
         : prev
     )
+    if (newStatus === "delivered") setTimeout(() => setShowPod(true), 300)
   }
 
   if (loading) {
@@ -165,6 +177,18 @@ export default function TripDetailPage() {
         </Button>
       )}
 
+      {/* Sign POD button for delivered trips */}
+      {trip.status === "delivered" && !podSigned && (
+        <Button className="w-full" variant="outline" onClick={() => setShowPod(true)}>
+          Sign Proof of Delivery
+        </Button>
+      )}
+      {trip.status === "delivered" && podSigned && (
+        <div className="w-full text-center text-sm text-green-600 font-medium py-2">
+          ✓ Proof of delivery signed
+        </div>
+      )}
+
       {/* Inspection checklist modals */}
       {inspectionModal && trip && (
         <InspectionChecklistModal
@@ -173,6 +197,16 @@ export default function TripDetailPage() {
           tripId={trip.id}
           onComplete={handleInspectionComplete}
           onClose={() => setInspectionModal(null)}
+        />
+      )}
+
+      {/* Signature / POD modal */}
+      {trip && (
+        <SignatureModal
+          open={showPod}
+          tripId={trip.id}
+          onComplete={() => setPodSigned(true)}
+          onClose={() => setShowPod(false)}
         />
       )}
 

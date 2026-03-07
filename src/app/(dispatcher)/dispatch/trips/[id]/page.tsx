@@ -61,17 +61,20 @@ export default function DispatchTripDetailPage() {
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [inspections, setInspections] = useState<Inspections>({ pre: null, post: null })
+  const [pod, setPod] = useState<{ signatureDataUrl: string; signedAt: string } | null>(null)
 
   useEffect(() => {
     Promise.all([
       fetch("/api/dispatch/trips").then((r) => r.json()),
       fetch(`/api/dispatch/trips/${id}/inspections`).then((r) => r.json()),
+      fetch(`/api/dispatch/trips/${id}/pod`).then((r) => r.json()),
     ])
-      .then(([rows, insp]: [TripDetail[], Inspections]) => {
+      .then(([rows, insp, podData]: [TripDetail[], Inspections, { pod: typeof pod }]) => {
         const found = rows.find((t) => t.id === id)
         if (!found) { toast.error("Trip not found"); router.push("/dispatch/trips") }
         else setTrip(found)
         setInspections(insp)
+        if (podData?.pod) setPod(podData.pod)
       })
       .catch(() => { toast.error("Failed to load trip"); router.push("/dispatch/trips") })
       .finally(() => setLoading(false))
@@ -189,6 +192,28 @@ export default function DispatchTripDetailPage() {
               })}
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Proof of Delivery */}
+      {trip.status === "delivered" && (
+        <section className="border rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Proof of Delivery
+          </p>
+          {pod ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Signed at {new Date(pod.signedAt).toLocaleString()}
+              </p>
+              <div className="border rounded-lg overflow-hidden bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={pod.signatureDataUrl} alt="Delivery signature" className="w-full max-h-32 object-contain" />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Awaiting driver signature</p>
+          )}
         </section>
       )}
 
