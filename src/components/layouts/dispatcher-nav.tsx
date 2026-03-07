@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { LayoutDashboard, MapPin, Truck, Bell, Map } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -15,6 +16,24 @@ const navItems = [
 
 export function DispatcherNav() {
   const pathname = usePathname()
+  const [alertCount, setAlertCount] = useState(0)
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch("/api/dispatch/alerts")
+        if (res.ok) {
+          const data = await res.json()
+          setAlertCount(Array.isArray(data) ? data.length : 0)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void fetchAlerts()
+    const interval = setInterval(() => { void fetchAlerts() }, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <aside className="w-60 shrink-0 border-r min-h-[calc(100vh-4rem)] flex flex-col">
@@ -25,6 +44,7 @@ export function DispatcherNav() {
         <nav className="space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href || (href !== "/dispatch" && pathname.startsWith(href))
+            const isAlerts = href === "/dispatch/alerts"
             return (
               <Link
                 key={href}
@@ -38,6 +58,11 @@ export function DispatcherNav() {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {label}
+                {isAlerts && alertCount > 0 && (
+                  <span className="ml-auto text-xs bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 leading-none">
+                    {alertCount}
+                  </span>
+                )}
               </Link>
             )
           })}
