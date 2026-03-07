@@ -235,6 +235,25 @@ export const notifications = pgTable(
   ]
 )
 
+export const proofOfDeliveries = pgTable(
+  "proof_of_deliveries",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    tripId: text("trip_id")
+      .notNull()
+      .unique()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    driverId: text("driver_id")
+      .notNull()
+      .references(() => drivers.id, { onDelete: "cascade" }),
+    // Base64 PNG data URL of the signature
+    signatureDataUrl: text("signature_data_url").notNull(),
+    signedAt: timestamp("signed_at").defaultNow().notNull(),
+    notes: text("notes"),
+  },
+  (table) => [index("pod_trip_id_idx").on(table.tripId)]
+)
+
 export const tripInspections = pgTable(
   "trip_inspections",
   {
@@ -269,6 +288,7 @@ export type TruckLocation = typeof truckLocations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type TripInspection = typeof tripInspections.$inferSelect;
+export type ProofOfDelivery = typeof proofOfDeliveries.$inferSelect;
 export type UserRole = "admin" | "dispatcher" | "driver";
 export type TruckStatus = "available" | "on_trip" | "maintenance" | "inactive";
 export type DriverStatus = "available" | "on_shift" | "driving" | "delivering" | "off_duty";
