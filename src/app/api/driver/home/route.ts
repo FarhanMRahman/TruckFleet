@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { trips, trucks, chemicalLoads, drivers } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
-import { eq, and, inArray, desc } from "drizzle-orm"
+import { eq, desc } from "drizzle-orm"
 
 export async function GET() {
   try {
@@ -17,9 +17,6 @@ export async function GET() {
     if (!driverProfile) {
       return NextResponse.json({ driverProfile: null, activeTrip: null, upcomingTrips: [], stats: { completed: 0, total: 0 } })
     }
-
-    const now = new Date()
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
     // All trips for this driver
     const allTrips = await db

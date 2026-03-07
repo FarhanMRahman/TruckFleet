@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { trucks, drivers, chemicalLoads, user } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
-import { eq, inArray } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 export async function GET(req: NextRequest) {
   try {

@@ -70,7 +70,6 @@ function formatDate(iso: string | null) {
 }
 
 function mapsUrl(origin: string, destination: string) {
-  const q = encodeURIComponent(`${origin} to ${destination}`)
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`
 }
 

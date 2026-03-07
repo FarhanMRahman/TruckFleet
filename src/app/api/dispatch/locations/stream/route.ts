@@ -22,14 +22,22 @@ export async function GET() {
         try {
           const locations = await fetchLatestLocations()
           if (closed) return
-          controller.enqueue(encode(locations))
+          try {
+            controller.enqueue(encode(locations))
+          } catch {
+            // Stream closed by runtime without calling cancel()
+            closed = true
+            clearInterval(interval)
+          }
         } catch {
-          // ignore transient errors
+          // DB or serialisation error — ignore
         }
       }
 
-      await send()
-      interval = setInterval(() => { void send() }, POLL_INTERVAL_MS)
+      await send().catch(() => {})
+      if (!closed) {
+        interval = setInterval(() => { send().catch(() => {}) }, POLL_INTERVAL_MS)
+      }
     },
     cancel() {
       closed = true
