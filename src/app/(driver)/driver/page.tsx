@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MapPin, Package, CheckCircle, Clock, ChevronRight, Truck, Circle } from "lucide-react"
+import { MapPin, Package, CheckCircle, Clock, ChevronRight, Truck, Circle, AlertTriangle, Timer } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,6 +36,18 @@ type HomeData = {
   stats: { completed: number; total: number }
 }
 
+type HosSummary = {
+  drivingHours: number
+  onDutyHours: number
+  isOnShift: boolean
+  warnings: {
+    approachingDrivingLimit: boolean
+    exceededDrivingLimit: boolean
+    approachingOnDutyLimit: boolean
+    exceededOnDutyLimit: boolean
+  }
+}
+
 const TRIP_STATUS_STYLES: Record<string, string> = {
   assigned: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   in_progress: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
@@ -65,6 +77,7 @@ function formatDate(iso: string | null) {
 export default function DriverHomePage() {
   const router = useRouter()
   const [data, setData] = useState<HomeData | null>(null)
+  const [hos, setHos] = useState<HosSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
@@ -74,6 +87,11 @@ export default function DriverHomePage() {
       .then(setData)
       .catch(() => toast.error("Failed to load your trips"))
       .finally(() => setLoading(false))
+
+    fetch("/api/driver/hos")
+      .then((r) => r.json())
+      .then((d) => { if (d && !d.error) setHos(d) })
+      .catch(() => {})
   }, [])
 
   async function updateDriverStatus(status: string) {
@@ -219,6 +237,52 @@ export default function DriverHomePage() {
               <span>Completed</span>
             </div>
             <p className="text-2xl font-bold">{stats?.completed ?? 0}</p>
+          </div>
+        </div>
+      )}
+
+      {/* HOS summary */}
+      {driverProfile && hos && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Hours of Service (7-day)</h2>
+          <div className="border rounded-xl p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Timer className="h-3.5 w-3.5" />
+                  Driving
+                </div>
+                <p className={`text-xl font-bold ${hos.warnings.exceededDrivingLimit ? "text-red-600" : hos.warnings.approachingDrivingLimit ? "text-orange-500" : ""}`}>
+                  {hos.drivingHours}h <span className="text-sm font-normal text-muted-foreground">/ 11h</span>
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  On-Duty
+                </div>
+                <p className={`text-xl font-bold ${hos.warnings.exceededOnDutyLimit ? "text-red-600" : hos.warnings.approachingOnDutyLimit ? "text-orange-500" : ""}`}>
+                  {hos.onDutyHours}h <span className="text-sm font-normal text-muted-foreground">/ 14h</span>
+                </p>
+              </div>
+            </div>
+            {(hos.warnings.approachingDrivingLimit || hos.warnings.exceededDrivingLimit ||
+              hos.warnings.approachingOnDutyLimit || hos.warnings.exceededOnDutyLimit) && (
+              <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
+                hos.warnings.exceededDrivingLimit || hos.warnings.exceededOnDutyLimit
+                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                  : "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
+              }`}>
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {hos.warnings.exceededDrivingLimit
+                  ? "Driving limit exceeded — rest required"
+                  : hos.warnings.exceededOnDutyLimit
+                  ? "On-duty limit exceeded — rest required"
+                  : hos.warnings.approachingDrivingLimit
+                  ? "Approaching 11h driving limit"
+                  : "Approaching 14h on-duty limit"}
+              </div>
+            )}
           </div>
         </div>
       )}

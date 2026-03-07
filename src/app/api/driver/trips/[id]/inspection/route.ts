@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { eq, and } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { tripInspections, trips, drivers } from "@/lib/schema"
+import { tripInspections, trips, drivers, hosLogs } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -69,7 +69,7 @@ export async function POST(
 
     // Verify the trip belongs to this driver
     const [trip] = await db
-      .select({ id: trips.id, status: trips.status })
+      .select({ id: trips.id, status: trips.status, startedAt: trips.startedAt })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.driverId, driverId)))
       .limit(1)
@@ -93,10 +93,24 @@ export async function POST(
         .set({ status: "in_progress", startedAt: new Date() })
         .where(eq(trips.id, tripId))
     } else if (type === "post" && trip.status === "in_progress") {
+      const deliveredAt = new Date()
       await db
         .update(trips)
-        .set({ status: "delivered", deliveredAt: new Date() })
+        .set({ status: "delivered", deliveredAt })
         .where(eq(trips.id, tripId))
+
+      // Record driving time in HOS log
+      const drivingMinutes = trip.startedAt
+        ? Math.round((deliveredAt.getTime() - trip.startedAt.getTime()) / 60000)
+        : 0
+      await db.insert(hosLogs).values({
+        driverId,
+        tripId,
+        type: "driving",
+        shiftStart: trip.startedAt ?? deliveredAt,
+        shiftEnd: deliveredAt,
+        drivingMinutes,
+      })
     }
 
     return NextResponse.json({ inspection })
