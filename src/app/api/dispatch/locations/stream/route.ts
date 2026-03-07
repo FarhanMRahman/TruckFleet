@@ -11,17 +11,20 @@ export async function GET() {
   }
 
   let interval: ReturnType<typeof setInterval> | undefined
+  let closed = false
 
   const stream = new ReadableStream({
     async start(controller) {
       const encode = (data: unknown) => `data: ${JSON.stringify(data)}\n\n`
 
       const send = async () => {
+        if (closed) return
         try {
           const locations = await fetchLatestLocations()
+          if (closed) return
           controller.enqueue(encode(locations))
         } catch {
-          // ignore — cancel() will clean up the interval
+          // ignore transient errors
         }
       }
 
@@ -29,6 +32,7 @@ export async function GET() {
       interval = setInterval(() => { void send() }, POLL_INTERVAL_MS)
     },
     cancel() {
+      closed = true
       clearInterval(interval)
     },
   })
