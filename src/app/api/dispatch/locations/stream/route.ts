@@ -10,6 +10,8 @@ export async function GET() {
     return new Response("Unauthorized", { status: 401 })
   }
 
+  let interval: ReturnType<typeof setInterval> | undefined
+
   const stream = new ReadableStream({
     async start(controller) {
       const encode = (data: unknown) => `data: ${JSON.stringify(data)}\n\n`
@@ -19,14 +21,15 @@ export async function GET() {
           const locations = await fetchLatestLocations()
           controller.enqueue(encode(locations))
         } catch {
-          controller.close()
+          // ignore — cancel() will clean up the interval
         }
       }
 
       await send()
-      const interval = setInterval(() => { void send() }, POLL_INTERVAL_MS)
-
-      return () => clearInterval(interval)
+      interval = setInterval(() => { void send() }, POLL_INTERVAL_MS)
+    },
+    cancel() {
+      clearInterval(interval)
     },
   })
 
