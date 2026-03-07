@@ -141,6 +141,10 @@ export function FleetMap({ initialLocations }: Props) {
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       })
 
+      // Always clear any stale Leaflet state on the container before init
+      const container = containerRef.current as unknown as Record<string, unknown>
+      delete container._leaflet_id
+
       let map: LeafletMap
       try {
         map = Leaflet.map(containerRef.current).setView([39.8283, -98.5795], 4)
