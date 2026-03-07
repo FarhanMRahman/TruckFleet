@@ -15,7 +15,7 @@ const loadSchema = z.object({
 
 export async function GET() {
   try {
-    await requireRole(["admin"])
+    await requireRole(["admin", "dispatcher"])
     const loads = await db.select().from(chemicalLoads).orderBy(chemicalLoads.name)
     return NextResponse.json(loads)
   } catch {

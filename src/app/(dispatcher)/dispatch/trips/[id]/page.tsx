@@ -60,14 +60,7 @@ export default function DispatchTripDetailPage() {
   const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [currentUserId, setCurrentUserId] = useState<string>("")
   const [inspections, setInspections] = useState<Inspections>({ pre: null, post: null })
-
-  useEffect(() => {
-    fetch("/api/auth/get-session").then((r) => r.json()).then((s) => {
-      if (s?.user?.id) setCurrentUserId(s.user.id)
-    })
-  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -200,7 +193,7 @@ export default function DispatchTripDetailPage() {
       )}
 
       {/* Messages */}
-      {currentUserId && <TripMessageThread tripId={trip.id} currentUserId={currentUserId} />}
+      <TripMessageThread tripId={trip.id} currentUserId="" />
     </div>
   )
 }

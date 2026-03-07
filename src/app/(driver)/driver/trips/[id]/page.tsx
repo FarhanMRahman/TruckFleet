@@ -79,13 +79,6 @@ export default function TripDetailPage() {
   const router = useRouter()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [currentUserId, setCurrentUserId] = useState<string>("")
-
-  useEffect(() => {
-    fetch("/api/auth/get-session").then((r) => r.json()).then((s) => {
-      if (s?.user?.id) setCurrentUserId(s.user.id)
-    })
-  }, [])
   const [inspectionModal, setInspectionModal] = useState<"pre" | "post" | null>(null)
 
   useEffect(() => {
@@ -263,7 +256,7 @@ export default function TripDetailPage() {
       )}
 
       {/* Messages */}
-      {currentUserId && <TripMessageThread tripId={trip.id} currentUserId={currentUserId} />}
+      <TripMessageThread tripId={trip.id} currentUserId="" />
 
       {/* GPS tracker — active while trip is assigned or in progress */}
       <GpsTracker active={trip.status === "assigned" || trip.status === "in_progress"} />

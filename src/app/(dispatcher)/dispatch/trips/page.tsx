@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import Link from "next/link"
-import { Plus, MapPin, ChevronDown, MessageSquare } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Plus, MapPin, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -74,6 +74,7 @@ const NEXT_STATUSES: Record<string, { value: string; label: string }[]> = {
 }
 
 export default function TripsPage() {
+  const router = useRouter()
   const [tripList, setTripList] = useState<TripRow[]>([])
   const [loads, setLoads] = useState<ChemicalLoad[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,8 +88,10 @@ export default function TripsPage() {
         fetch("/api/dispatch/trips"),
         fetch("/api/admin/chemical-loads"),
       ])
-      setTripList(await tripsRes.json())
-      setLoads(await loadsRes.json())
+      const tripsData = await tripsRes.json()
+      const loadsData = await loadsRes.json()
+      setTripList(Array.isArray(tripsData) ? tripsData : [])
+      setLoads(Array.isArray(loadsData) ? loadsData : [])
     } catch {
       toast.error("Failed to load trips")
     } finally {
@@ -178,7 +181,11 @@ export default function TripsPage() {
               </TableRow>
             ) : (
               tripList.map((trip) => (
-                <TableRow key={trip.id}>
+                <TableRow
+                  key={trip.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/dispatch/trips/${trip.id}`)}
+                >
                   <TableCell>
                     <div>
                       <p className="font-medium text-sm">{trip.loadName ?? "—"}</p>
@@ -208,13 +215,7 @@ export default function TripsPage() {
                       {STATUS_LABELS[trip.status] ?? trip.status}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" asChild title="Messages">
-                      <Link href={`/dispatch/trips/${trip.id}`}>
-                        <MessageSquare className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     {NEXT_STATUSES[trip.status] ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -240,7 +241,6 @@ export default function TripsPage() {
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
-                    </div>
                   </TableCell>
                 </TableRow>
               ))
