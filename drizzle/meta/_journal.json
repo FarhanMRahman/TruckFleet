@@ -57,6 +57,13 @@
       "when": 1772860072665,
       "tag": "0007_spicy_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772910138468,
+      "tag": "0008_quick_tusk",
+      "breakpoints": true
     }
   ]
 }

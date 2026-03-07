@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index, doublePrecision, json } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, doublePrecision, json, integer } from "drizzle-orm/pg-core";
 
 // IMPORTANT! ID fields should ALWAYS use UUID types, EXCEPT the BetterAuth tables.
 
@@ -276,6 +276,29 @@ export const tripInspections = pgTable(
   ]
 )
 
+export const hosLogs = pgTable(
+  "hos_logs",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    driverId: text("driver_id")
+      .notNull()
+      .references(() => drivers.id, { onDelete: "cascade" }),
+    // null for shift records; set for driving records linked to a trip
+    tripId: text("trip_id").references(() => trips.id, { onDelete: "set null" }),
+    // "shift" | "driving"
+    type: text("type").notNull(),
+    shiftStart: timestamp("shift_start"),
+    shiftEnd: timestamp("shift_end"),
+    // Populated for type="driving" when trip is delivered
+    drivingMinutes: integer("driving_minutes").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("hos_logs_driver_id_idx").on(table.driverId),
+    index("hos_logs_created_at_idx").on(table.createdAt),
+  ]
+)
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type User = typeof user.$inferSelect;
@@ -289,6 +312,7 @@ export type Message = typeof messages.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type TripInspection = typeof tripInspections.$inferSelect;
 export type ProofOfDelivery = typeof proofOfDeliveries.$inferSelect;
+export type HosLog = typeof hosLogs.$inferSelect;
 export type UserRole = "admin" | "dispatcher" | "driver";
 export type TruckStatus = "available" | "on_trip" | "maintenance" | "inactive";
 export type DriverStatus = "available" | "on_shift" | "driving" | "delivering" | "off_duty";
