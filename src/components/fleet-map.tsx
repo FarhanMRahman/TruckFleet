@@ -97,6 +97,9 @@ export function FleetMap({ initialLocations }: Props) {
       cancelled = true
       mapRef.current?.remove()
       mapRef.current = null
+      if (containerRef.current) {
+        delete (containerRef.current as unknown as Record<string, unknown>)._leaflet_id
+      }
     }
   }, [])
 
