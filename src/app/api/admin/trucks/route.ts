@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(truck, { status: 201 })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: err.issues[0]?.message ?? "Validation error" }, { status: 400 })
     }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

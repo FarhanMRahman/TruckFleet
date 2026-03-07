@@ -86,14 +86,14 @@ export async function POST(req: NextRequest) {
         userId: driverRow.userId,
         type: "trip_assigned",
         message: `You have been assigned a new trip: ${load?.name ?? "chemical load"} from ${data.origin} to ${data.destination}.`,
-        tripId: trip.id,
+        tripId: trip?.id,
       })
     }
 
     return NextResponse.json(trip, { status: 201 })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: err.errors[0].message }, { status: 400 })
+      return NextResponse.json({ error: err.issues[0]?.message ?? "Validation error" }, { status: 400 })
     }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

@@ -21,9 +21,6 @@ export async function GET() {
       .from(trips)
       .where(inArray(trips.status, ["assigned", "in_progress"]))
 
-    const busyTruckIds = new Set(activeTrips.map((t) => t.truckId).filter(Boolean))
-    const busyDriverIds = new Set(activeTrips.map((t) => t.driverId).filter(Boolean))
-
     const tripByTruck = Object.fromEntries(
       activeTrips.filter((t) => t.truckId).map((t) => [t.truckId!, t])
     )

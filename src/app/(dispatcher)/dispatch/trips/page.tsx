@@ -5,7 +5,6 @@ import { toast } from "sonner"
 import Link from "next/link"
 import { Plus, MapPin, ChevronDown, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -224,7 +223,7 @@ export default function TripsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {NEXT_STATUSES[trip.status].map((next, i) => (
+                          {(NEXT_STATUSES[trip.status] ?? []).map((next, i) => (
                             <>
                               {i > 0 && <DropdownMenuSeparator key={`sep-${i}`} />}
                               <DropdownMenuItem

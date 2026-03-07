@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  reactStrictMode: false,
   allowedDevOrigins: ["192.168.0.14", "5e8e-73-182-153-238.ngrok-free.app"],
   // Image optimization configuration
   images: {
