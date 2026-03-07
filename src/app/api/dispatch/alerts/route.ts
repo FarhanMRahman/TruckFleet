@@ -4,9 +4,6 @@ import { truckLocations, trucks, drivers, trips, chemicalLoads, user } from "@/l
 import { requireRole } from "@/lib/session"
 import { eq, and, inArray, sql, desc } from "drizzle-orm"
 
-const OFFLINE_THRESHOLD_MS = 10 * 60 * 1000 // 10 minutes
-const DELAY_THRESHOLD_MS = 2 * 60 * 60 * 1000 // 2 hours past scheduled
-
 export type OfflineAlert = {
   type: "offline"
   truckId: string
@@ -35,11 +32,10 @@ export async function GET() {
   try {
     await requireRole(["admin", "dispatcher"])
 
-    const now = new Date()
     const alerts: Alert[] = []
 
     // ── Offline alerts ────────────────────────────────────────────────────────
-    // Get latest location per truck for active trips
+    // Trucks on active trips whose last ping was > 10 minutes ago (compared in DB)
     const latestPerTruck = db
       .select({
         truckId: truckLocations.truckId,
@@ -56,6 +52,7 @@ export async function GET() {
         truckPlate: trucks.plate,
         driverName: user.name,
         lastPing: latestPerTruck.maxRecordedAt,
+        minutesOffline: sql<number>`EXTRACT(EPOCH FROM (NOW() - ${latestPerTruck.maxRecordedAt})) / 60`.as("minutes_offline"),
       })
       .from(trucks)
       .innerJoin(latestPerTruck, eq(trucks.id, latestPerTruck.truckId))
@@ -68,24 +65,27 @@ export async function GET() {
       )
       .leftJoin(drivers, eq(trips.driverId, drivers.id))
       .leftJoin(user, eq(drivers.userId, user.id))
-      .where(inArray(trips.status, ["assigned", "in_progress"]))
+      .where(
+        and(
+          inArray(trips.status, ["assigned", "in_progress"]),
+          sql`${latestPerTruck.maxRecordedAt} < NOW() - INTERVAL '10 minutes'`
+        )
+      )
 
     for (const loc of activeLocations) {
-      const msSinceLastPing = now.getTime() - new Date(loc.lastPing).getTime()
-      if (msSinceLastPing > OFFLINE_THRESHOLD_MS) {
-        alerts.push({
-          type: "offline",
-          truckId: loc.truckId,
-          truckName: loc.truckName,
-          truckPlate: loc.truckPlate,
-          driverName: loc.driverName,
-          lastPing: loc.lastPing,
-          minutesSinceLastPing: Math.floor(msSinceLastPing / 60_000),
-        })
-      }
+      alerts.push({
+        type: "offline",
+        truckId: loc.truckId,
+        truckName: loc.truckName,
+        truckPlate: loc.truckPlate,
+        driverName: loc.driverName,
+        lastPing: loc.lastPing,
+        minutesSinceLastPing: Math.floor(Number(loc.minutesOffline)),
+      })
     }
 
     // ── Delay alerts ──────────────────────────────────────────────────────────
+    // In-progress trips whose scheduledAt was > 2 hours ago (compared in DB)
     const activeTrips = await db
       .select({
         tripId: trips.id,
@@ -95,31 +95,34 @@ export async function GET() {
         truckName: trucks.name,
         driverName: user.name,
         loadName: chemicalLoads.name,
+        hoursOverdue: sql<number>`EXTRACT(EPOCH FROM (NOW() - ${trips.scheduledAt})) / 3600`.as("hours_overdue"),
       })
       .from(trips)
       .leftJoin(trucks, eq(trips.truckId, trucks.id))
       .leftJoin(drivers, eq(trips.driverId, drivers.id))
       .leftJoin(user, eq(drivers.userId, user.id))
       .leftJoin(chemicalLoads, eq(trips.loadId, chemicalLoads.id))
-      .where(eq(trips.status, "in_progress"))
+      .where(
+        and(
+          eq(trips.status, "in_progress"),
+          sql`${trips.scheduledAt} < NOW() - INTERVAL '2 hours'`
+        )
+      )
       .orderBy(desc(trips.scheduledAt))
 
     for (const trip of activeTrips) {
       if (!trip.scheduledAt) continue
-      const msOverdue = now.getTime() - new Date(trip.scheduledAt).getTime()
-      if (msOverdue > DELAY_THRESHOLD_MS) {
-        alerts.push({
-          type: "delay",
-          tripId: trip.tripId,
-          truckName: trip.truckName,
-          driverName: trip.driverName,
-          loadName: trip.loadName,
-          origin: trip.origin,
-          destination: trip.destination,
-          scheduledAt: trip.scheduledAt,
-          hoursOverdue: Math.floor(msOverdue / 3_600_000),
-        })
-      }
+      alerts.push({
+        type: "delay",
+        tripId: trip.tripId,
+        truckName: trip.truckName,
+        driverName: trip.driverName,
+        loadName: trip.loadName,
+        origin: trip.origin,
+        destination: trip.destination,
+        scheduledAt: trip.scheduledAt,
+        hoursOverdue: Math.floor(Number(trip.hoursOverdue)),
+      })
     }
 
     return NextResponse.json(alerts)
