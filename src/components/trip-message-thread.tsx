@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, memo } from "react"
 import { toast } from "sonner"
 import { Send, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,23 +24,55 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
 
+const MessageBubble = memo(function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
+  return (
+    <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-background border rounded-bl-sm"}`}>
+        {msg.content}
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-0.5 px-1">
+        {!isOwn && <span className="font-medium">{msg.senderName} · </span>}
+        {timeAgo(msg.createdAt)}
+      </p>
+    </div>
+  )
+})
+
 interface Props {
   tripId: string
   currentUserId: string
 }
 
-export function TripMessageThread({ tripId, currentUserId }: Props) {
+export function TripMessageThread({ tripId, currentUserId: initialUserId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [content, setContent] = useState("")
   const [sending, setSending] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [currentUserId, setCurrentUserId] = useState(initialUserId)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (initialUserId) { setCurrentUserId(initialUserId); return }
+    fetch("/api/auth/get-session")
+      .then((r) => r.json())
+      .then((s) => { if (s?.user?.id) setCurrentUserId(s.user.id) })
+      .catch(() => {})
+  }, [initialUserId])
 
   const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${tripId}/messages`)
       if (res.ok) {
-        const data = await res.json()
-        setMessages(data)
+        const data: Message[] = await res.json()
+        setMessages((prev) => {
+          // Skip re-render if message list hasn't changed
+          if (
+            prev.length === data.length &&
+            prev.every((m, i) => m.id === data[i]?.id && m.content === data[i]?.content)
+          ) {
+            return prev
+          }
+          return data
+        })
       }
     } catch {
       // silently ignore poll failures
@@ -53,9 +85,10 @@ export function TripMessageThread({ tripId, currentUserId }: Props) {
     return () => clearInterval(interval)
   }, [fetchMessages])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  function scrollToBottom() {
+    const el = containerRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }
 
   async function sendMessage() {
     if (!content.trim()) return
@@ -70,6 +103,7 @@ export function TripMessageThread({ tripId, currentUserId }: Props) {
       const msg = await res.json()
       setMessages((prev) => [...prev, msg])
       setContent("")
+      requestAnimationFrame(scrollToBottom)
     } catch {
       toast.error("Failed to send message")
     } finally {
@@ -92,28 +126,16 @@ export function TripMessageThread({ tripId, currentUserId }: Props) {
       </div>
 
       {/* Message list */}
-      <div className="p-3 space-y-3 max-h-64 overflow-y-auto bg-muted/20">
+      <div ref={containerRef} className="p-3 space-y-3 max-h-64 overflow-y-auto bg-muted/20">
         {messages.length === 0 ? (
           <p className="text-xs text-center text-muted-foreground py-4">
             No messages yet. Start the conversation.
           </p>
         ) : (
-          messages.map((msg) => {
-            const isOwn = msg.senderId === currentUserId
-            return (
-              <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-background border rounded-bl-sm"}`}>
-                  {msg.content}
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5 px-1">
-                  {!isOwn && <span className="font-medium">{msg.senderName} · </span>}
-                  {timeAgo(msg.createdAt)}
-                </p>
-              </div>
-            )
-          })
+          messages.map((msg) => (
+            <MessageBubble key={msg.id} msg={msg} isOwn={msg.senderId === currentUserId} />
+          ))
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
