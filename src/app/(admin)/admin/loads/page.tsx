@@ -186,6 +186,7 @@ export default function ChemicalLoadsPage() {
           setModalOpen(false)
           fetchLoads()
         }}
+        onDocumentChange={fetchLoads}
       />
 
       {/* Delete Confirmation */}

@@ -73,9 +73,10 @@ interface Props {
   onOpenChange: (open: boolean) => void
   editing: ChemicalLoad | null
   onSuccess: () => void
+  onDocumentChange?: () => void
 }
 
-export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Props) {
+export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess, onDocumentChange }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [sdsUrl, setSdsUrl] = useState<string | null>(null)
   const [uploadingDoc, setUploadingDoc] = useState(false)
@@ -135,7 +136,7 @@ export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Pr
       const { url } = await res.json()
       setSdsUrl(url)
       toast.success("SDS document uploaded")
-      onSuccess()
+      onDocumentChange?.()
     } finally {
       setUploadingDoc(false)
     }
@@ -148,7 +149,7 @@ export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Pr
       await fetch(`/api/admin/chemical-loads/${editing.id}/document`, { method: "DELETE" })
       setSdsUrl(null)
       toast.success("SDS document removed")
-      onSuccess()
+      onDocumentChange?.()
     } finally {
       setUploadingDoc(false)
     }
