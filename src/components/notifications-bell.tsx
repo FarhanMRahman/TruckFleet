@@ -65,9 +65,9 @@ export function NotificationsBell() {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  async function handleClick(n: Notification) {
+  function handleClick(n: Notification) {
     if (!n.read) {
-      await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" })
+      fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {})
       setItems((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
     }
     const link = getLink(n)
