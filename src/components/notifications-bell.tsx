@@ -112,7 +112,7 @@ export function NotificationsBell() {
           </div>
         ) : (
           items.slice(0, 10).map((n) => {
-            const itemClass = `flex flex-col items-start gap-1 p-3 cursor-pointer whitespace-normal ${!n.read ? "bg-muted/50" : ""}`
+            const baseClass = `relative flex w-full flex-col items-start gap-1 rounded-sm p-3 text-sm outline-none whitespace-normal cursor-pointer select-none ${!n.read ? "bg-muted/50" : ""}`
             const inner = (
               <>
                 <div className="flex items-start justify-between w-full gap-2">
@@ -127,23 +127,24 @@ export function NotificationsBell() {
               </>
             )
             if (n.actionUrl) {
+              // Plain <a> — no Radix wrapper so mobile browsers can open target="_blank" natively
               return (
-                <DropdownMenuItem key={n.id} className={itemClass} asChild>
-                  <a
-                    href={n.actionUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => markRead(n)}
-                  >
-                    {inner}
-                  </a>
-                </DropdownMenuItem>
+                <a
+                  key={n.id}
+                  href={n.actionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${baseClass} hover:bg-accent focus:bg-accent`}
+                  onClick={() => markRead(n)}
+                >
+                  {inner}
+                </a>
               )
             }
             return (
               <DropdownMenuItem
                 key={n.id}
-                className={itemClass}
+                className={baseClass}
                 onClick={() => handleClick(n)}
               >
                 {inner}
