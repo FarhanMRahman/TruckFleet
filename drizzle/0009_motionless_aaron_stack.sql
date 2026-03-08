@@ -1,0 +1,1 @@
+ALTER TABLE "chemical_loads" ADD COLUMN "sds_document_url" text;

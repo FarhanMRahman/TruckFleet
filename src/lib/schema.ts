@@ -141,6 +141,7 @@ export const chemicalLoads = pgTable(
     // Required driver certifications, e.g. ["hazmat", "tanker"]
     requiredCertifications: text("required_certifications").array().notNull().default([]),
     handlingNotes: text("handling_notes"),
+    sdsDocumentUrl: text("sds_document_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

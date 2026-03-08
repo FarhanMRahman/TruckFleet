@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { toast } from "sonner"
+import { FileText, Trash2, Upload } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,9 @@ interface Props {
 
 export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Props) {
   const [submitting, setSubmitting] = useState(false)
+  const [sdsUrl, setSdsUrl] = useState<string | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
@@ -90,6 +94,7 @@ export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Pr
 
   useEffect(() => {
     if (open) {
+      setSdsUrl(editing?.sdsDocumentUrl ?? null)
       reset(
         editing
           ? {
@@ -111,6 +116,43 @@ export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Pr
       )
     }
   }, [open, editing, reset])
+
+  async function handleDocUpload(file: File) {
+    if (!editing) return
+    setUploadingDoc(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch(`/api/admin/chemical-loads/${editing.id}/document`, {
+        method: "POST",
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error ?? "Upload failed")
+        return
+      }
+      const { url } = await res.json()
+      setSdsUrl(url)
+      toast.success("SDS document uploaded")
+      onSuccess()
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  async function handleDocDelete() {
+    if (!editing) return
+    setUploadingDoc(true)
+    try {
+      await fetch(`/api/admin/chemical-loads/${editing.id}/document`, { method: "DELETE" })
+      setSdsUrl(null)
+      toast.success("SDS document removed")
+      onSuccess()
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
@@ -275,6 +317,61 @@ export function ChemicalLoadModal({ open, onOpenChange, editing, onSuccess }: Pr
               rows={3}
             />
           </div>
+
+          {/* SDS Document — only available after saving */}
+          {editing && (
+            <div className="space-y-2">
+              <Label>SDS / Safety Data Sheet (PDF)</Label>
+              {sdsUrl ? (
+                <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a
+                    href={sdsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 truncate text-primary underline underline-offset-2"
+                  >
+                    View SDS document
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    onClick={handleDocDelete}
+                    disabled={uploadingDoc}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleDocUpload(file)
+                      e.target.value = ""
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingDoc}
+                  >
+                    <Upload className="mr-2 h-3.5 w-3.5" />
+                    {uploadingDoc ? "Uploading…" : "Upload PDF"}
+                  </Button>
+                  <p className="mt-1 text-xs text-muted-foreground">Max 10 MB · PDF only</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button
