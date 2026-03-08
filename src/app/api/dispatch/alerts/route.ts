@@ -126,28 +126,29 @@ export async function GET() {
       })
     }
 
-    // Create deduped notifications for dispatchers/admins
+    // Create deduped notifications for dispatchers/admins (fire-and-forget, never breaks the response)
     if (alerts.length > 0) {
-      const dispatcherIds = await getDispatcherUserIds()
-      await Promise.all(
-        alerts.map((alert) => {
-          if (alert.type === "offline") {
-            return createDedupedNotifications({
-              userIds: dispatcherIds,
-              type: "offline_alert",
-              message: `Truck ${alert.truckName} (${alert.truckPlate}) has been offline for ${alert.minutesSinceLastPing} min`,
-              tripId: alert.truckId,
-            })
-          } else {
-            return createDedupedNotifications({
-              userIds: dispatcherIds,
-              type: "delay_alert",
-              message: `Trip delayed: ${alert.loadName ?? "Unknown load"} — ${alert.origin} → ${alert.destination} (${alert.hoursOverdue}h overdue)`,
-              tripId: alert.tripId,
-            })
-          }
-        })
-      )
+      getDispatcherUserIds().then((dispatcherIds) =>
+        Promise.all(
+          alerts.map((alert) => {
+            if (alert.type === "offline") {
+              return createDedupedNotifications({
+                userIds: dispatcherIds,
+                type: "offline_alert",
+                message: `Truck ${alert.truckName} (${alert.truckPlate}) has been offline for ${alert.minutesSinceLastPing} min`,
+                tripId: alert.truckId,
+              })
+            } else {
+              return createDedupedNotifications({
+                userIds: dispatcherIds,
+                type: "delay_alert",
+                message: `Trip delayed: ${alert.loadName ?? "Unknown load"} — ${alert.origin} → ${alert.destination} (${alert.hoursOverdue}h overdue)`,
+                tripId: alert.tripId,
+              })
+            }
+          })
+        )
+      ).catch(() => {})
     }
 
     return NextResponse.json(alerts)

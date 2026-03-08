@@ -76,21 +76,22 @@ export async function GET() {
       }
     })
 
-    // Create deduped HOS warning notifications for dispatchers/admins
+    // Create deduped HOS warning notifications (fire-and-forget, never breaks the response)
     const flagged = result.filter((d) => d.flags.length > 0)
     if (flagged.length > 0) {
-      const dispatcherIds = await getDispatcherUserIds()
-      await Promise.all(
-        flagged.map((d) =>
-          createDedupedNotifications({
-            userIds: dispatcherIds,
-            type: "hos_warning",
-            message: `HOS warning for ${d.driverName}: ${d.flags.join(", ")}`,
-            tripId: d.driverId,
-            dedupWindowHours: 4,
-          })
+      getDispatcherUserIds().then((dispatcherIds) =>
+        Promise.all(
+          flagged.map((d) =>
+            createDedupedNotifications({
+              userIds: dispatcherIds,
+              type: "hos_warning",
+              message: `HOS warning for ${d.driverName}: ${d.flags.join(", ")}`,
+              tripId: d.driverId,
+              dedupWindowHours: 4,
+            })
+          )
         )
-      )
+      ).catch(() => {})
     }
 
     return NextResponse.json(result)
