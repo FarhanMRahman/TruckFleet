@@ -88,7 +88,7 @@ export default function DispatchMessagesPage() {
             <button
               key={t.tripId}
               onClick={() => router.push(`/dispatch/trips/${t.tripId}`)}
-              className="w-full text-left rounded-xl border bg-card hover:bg-muted/50 transition-colors p-4 space-y-2"
+              className="w-full text-left rounded-xl border bg-card hover:bg-muted/50 transition-colors p-4 space-y-2 cursor-pointer"
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-3">
