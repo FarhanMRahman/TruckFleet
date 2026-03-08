@@ -8,7 +8,6 @@ const config = [
       ".cache/**",
       "dist/**",
       "build/**",
-      "create-agentic-app/**",
       "drizzle/**",
       "scripts/**",
     ],
