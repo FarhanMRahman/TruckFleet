@@ -48,7 +48,9 @@ export function TripMessageThread({ tripId, currentUserId: initialUserId }: Prop
   const [content, setContent] = useState("")
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(initialUserId)
+  const [replyOpen, setReplyOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (initialUserId) { setCurrentUserId(initialUserId); return }
@@ -103,6 +105,7 @@ export function TripMessageThread({ tripId, currentUserId: initialUserId }: Prop
       const msg = await res.json()
       setMessages((prev) => [...prev, msg])
       setContent("")
+      setReplyOpen(false)
       requestAnimationFrame(scrollToBottom)
     } catch {
       toast.error("Failed to send message")
@@ -118,11 +121,22 @@ export function TripMessageThread({ tripId, currentUserId: initialUserId }: Prop
     }
   }
 
+  function openReply() {
+    setReplyOpen(true)
+    // Focus after render
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }
+
   return (
     <section className="border rounded-xl overflow-hidden">
-      <div className="p-3 border-b flex items-center gap-2 text-sm font-medium">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        Messages
+      <div className="p-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          Messages
+          {messages.length > 0 && (
+            <span className="text-xs text-muted-foreground font-normal">({messages.length})</span>
+          )}
+        </div>
       </div>
 
       {/* Message list */}
@@ -138,21 +152,38 @@ export function TripMessageThread({ tripId, currentUserId: initialUserId }: Prop
         )}
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t flex gap-2">
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message… (Enter to send)"
-          rows={1}
-          className="resize-none text-sm"
-          disabled={sending}
-        />
-        <Button size="icon" onClick={sendMessage} disabled={sending || !content.trim()}>
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      {/* Input — only mounted when reply is open to prevent mobile auto-scroll */}
+      {replyOpen ? (
+        <div className="p-3 border-t flex gap-2">
+          <Textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message…"
+            rows={2}
+            className="resize-none text-sm"
+            disabled={sending}
+          />
+          <div className="flex flex-col gap-1.5">
+            <Button size="icon" onClick={sendMessage} disabled={sending || !content.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={() => { setReplyOpen(false); setContent("") }}>
+              ✕
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3 border-t">
+          <button
+            onClick={openReply}
+            className="w-full text-left text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2.5 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer"
+          >
+            Tap to reply…
+          </button>
+        </div>
+      )}
     </section>
   )
 }
