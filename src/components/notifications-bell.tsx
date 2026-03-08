@@ -66,15 +66,15 @@ export function NotificationsBell() {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  function handleClick(n: Notification) {
+  function markRead(n: Notification) {
     if (!n.read) {
       fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {})
       setItems((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
     }
-    if (n.actionUrl) {
-      window.open(n.actionUrl, "_blank", "noopener,noreferrer")
-      return
-    }
+  }
+
+  function handleClick(n: Notification) {
+    markRead(n)
     const link = getLink(n)
     if (link) router.push(link)
   }
@@ -111,23 +111,45 @@ export function NotificationsBell() {
             No notifications
           </div>
         ) : (
-          items.slice(0, 10).map((n) => (
-            <DropdownMenuItem
-              key={n.id}
-              className={`flex flex-col items-start gap-1 p-3 cursor-pointer whitespace-normal ${!n.read ? "bg-muted/50" : ""}`}
-              onClick={() => handleClick(n)}
-            >
-              <div className="flex items-start justify-between w-full gap-2">
-                <p className={`text-sm leading-snug ${!n.read ? "font-medium" : "text-muted-foreground"}`}>
-                  {n.message}
-                </p>
-                {!n.read && (
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
-            </DropdownMenuItem>
-          ))
+          items.slice(0, 10).map((n) => {
+            const itemClass = `flex flex-col items-start gap-1 p-3 cursor-pointer whitespace-normal ${!n.read ? "bg-muted/50" : ""}`
+            const inner = (
+              <>
+                <div className="flex items-start justify-between w-full gap-2">
+                  <p className={`text-sm leading-snug ${!n.read ? "font-medium" : "text-muted-foreground"}`}>
+                    {n.message}
+                  </p>
+                  {!n.read && (
+                    <span className="mt-1 h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
+              </>
+            )
+            if (n.actionUrl) {
+              return (
+                <DropdownMenuItem key={n.id} className={itemClass} asChild>
+                  <a
+                    href={n.actionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => markRead(n)}
+                  >
+                    {inner}
+                  </a>
+                </DropdownMenuItem>
+              )
+            }
+            return (
+              <DropdownMenuItem
+                key={n.id}
+                className={itemClass}
+                onClick={() => handleClick(n)}
+              >
+                {inner}
+              </DropdownMenuItem>
+            )
+          })
         )}
       </DropdownMenuContent>
     </DropdownMenu>

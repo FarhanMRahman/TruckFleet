@@ -8,7 +8,8 @@ import { createDedupedNotifications, getDispatcherUserIds } from "@/lib/notifica
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireRole(["admin"])
+    const { session } = await requireRole(["admin"])
+    const uploaderId = session.user.id
     const { id } = await params
 
     const formData = await req.formData()
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           .where(eq(trips.loadId, id))
 
         const driverUserIds = assignedTrips.map((r) => r.userId)
-        const allUserIds = [...new Set([...dispatcherIds, ...driverUserIds])]
+        const allUserIds = [...new Set([...dispatcherIds, ...driverUserIds])].filter((uid) => uid !== uploaderId)
 
         return createDedupedNotifications({
           userIds: allUserIds,
