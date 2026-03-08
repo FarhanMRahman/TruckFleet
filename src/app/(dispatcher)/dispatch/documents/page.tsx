@@ -29,20 +29,24 @@ export default function DispatchDocumentsPage() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
 
-  async function fetchLoads() {
-    const res = await fetch("/api/admin/chemical-loads")
-    if (res.ok) setLoads(await res.json())
+  async function init() {
+    try {
+      const [loadsRes, session] = await Promise.all([
+        fetch("/api/admin/chemical-loads").then((r) => r.json()),
+        fetch("/api/auth/get-session").then((r) => r.json()),
+      ])
+      if (Array.isArray(loadsRes)) setLoads(loadsRes)
+      if (session?.user?.role === "admin") setIsAdmin(true)
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    Promise.all([
-      fetchLoads(),
-      fetch("/api/auth/get-session").then((r) => r.json()).then((s) => {
-        if (s?.user?.role === "admin") setIsAdmin(true)
-      }),
-    ])
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    void init()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -80,7 +84,7 @@ export default function DispatchDocumentsPage() {
                 SDS Available ({withDocs.length})
               </h2>
               {withDocs.map((load) => (
-                <LoadCard key={load.id} load={load} isAdmin={isAdmin} onRefresh={fetchLoads} />
+                <LoadCard key={load.id} load={load} isAdmin={isAdmin} onRefresh={init} />
               ))}
             </section>
           )}
@@ -91,7 +95,7 @@ export default function DispatchDocumentsPage() {
                 SDS Not Uploaded ({withoutDocs.length})
               </h2>
               {withoutDocs.map((load) => (
-                <LoadCard key={load.id} load={load} isAdmin={isAdmin} onRefresh={fetchLoads} />
+                <LoadCard key={load.id} load={load} isAdmin={isAdmin} onRefresh={init} />
               ))}
             </section>
           )}
