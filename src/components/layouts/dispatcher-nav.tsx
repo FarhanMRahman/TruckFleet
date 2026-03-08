@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { LayoutDashboard, MapPin, Truck, Bell, Map, ClipboardList } from "lucide-react"
+import { LayoutDashboard, MapPin, Truck, Bell, Map, ClipboardList, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/dispatch/map", label: "Live Map", icon: Map },
   { href: "/dispatch/alerts", label: "Alerts", icon: Bell },
   { href: "/dispatch/hos", label: "HOS Compliance", icon: ClipboardList },
+  { href: "/dispatch/messages", label: "Messages", icon: MessageSquare },
 ]
 
 export function DispatcherNav() {
