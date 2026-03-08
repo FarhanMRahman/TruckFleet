@@ -136,7 +136,7 @@ export async function GET() {
                 userIds: dispatcherIds,
                 type: "offline_alert",
                 message: `Truck ${alert.truckName} (${alert.truckPlate}) has been offline for ${alert.minutesSinceLastPing} min`,
-                tripId: alert.truckId,
+                tripId: null,
               })
             } else {
               return createDedupedNotifications({

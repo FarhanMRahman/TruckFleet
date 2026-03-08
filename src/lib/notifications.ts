@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray } from "drizzle-orm"
+import { and, eq, gte, inArray, isNull } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { notifications, user } from "@/lib/schema"
 
@@ -41,7 +41,7 @@ export async function createDedupedNotifications({
       and(
         inArray(notifications.userId, userIds),
         eq(notifications.type, type),
-        tripId ? eq(notifications.tripId, tripId) : undefined,
+        tripId ? eq(notifications.tripId, tripId) : isNull(notifications.tripId),
         gte(notifications.createdAt, since)
       )
     )

@@ -86,7 +86,7 @@ export async function GET() {
               userIds: dispatcherIds,
               type: "hos_warning",
               message: `HOS warning for ${d.driverName}: ${d.flags.join(", ")}`,
-              tripId: d.driverId,
+              tripId: null,
               dedupWindowHours: 4,
             })
           )
