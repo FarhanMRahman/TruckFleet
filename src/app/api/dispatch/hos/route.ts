@@ -3,6 +3,7 @@ import { eq, gte } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { drivers, hosLogs, user } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
+import { createDedupedNotifications, getDispatcherUserIds } from "@/lib/notifications"
 
 const MAX_DRIVING_HOURS = 11
 const MAX_ONDUTY_HOURS = 14
@@ -74,6 +75,24 @@ export async function GET() {
         flags,
       }
     })
+
+    // Create deduped HOS warning notifications (fire-and-forget, never breaks the response)
+    const flagged = result.filter((d) => d.flags.length > 0)
+    if (flagged.length > 0) {
+      getDispatcherUserIds().then((dispatcherIds) =>
+        Promise.all(
+          flagged.map((d) =>
+            createDedupedNotifications({
+              userIds: dispatcherIds,
+              type: "hos_warning",
+              message: `HOS warning for ${d.driverName}: ${d.flags.join(", ")}`,
+              tripId: null,
+              dedupWindowHours: 4,
+            })
+          )
+        )
+      ).catch(() => {})
+    }
 
     return NextResponse.json(result)
   } catch {

@@ -6,7 +6,8 @@ import { AlertsClient } from "@/components/alerts-client"
 async function getAlerts(): Promise<Alert[]> {
   const { GET } = await import("@/app/api/dispatch/alerts/route")
   const res = await GET()
-  return res.json()
+  const data = await res.json()
+  return Array.isArray(data) ? data : []
 }
 
 export default async function AlertsPage() {

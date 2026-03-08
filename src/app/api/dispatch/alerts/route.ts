@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { truckLocations, trucks, drivers, trips, chemicalLoads, user } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
 import { eq, and, inArray, sql, desc } from "drizzle-orm"
+import { createDedupedNotifications, getDispatcherUserIds } from "@/lib/notifications"
 
 export type OfflineAlert = {
   type: "offline"
@@ -123,6 +124,31 @@ export async function GET() {
         scheduledAt: trip.scheduledAt,
         hoursOverdue: Math.floor(Number(trip.hoursOverdue)),
       })
+    }
+
+    // Create deduped notifications for dispatchers/admins (fire-and-forget, never breaks the response)
+    if (alerts.length > 0) {
+      getDispatcherUserIds().then((dispatcherIds) =>
+        Promise.all(
+          alerts.map((alert) => {
+            if (alert.type === "offline") {
+              return createDedupedNotifications({
+                userIds: dispatcherIds,
+                type: "offline_alert",
+                message: `Truck ${alert.truckName} (${alert.truckPlate}) has been offline for ${alert.minutesSinceLastPing} min`,
+                tripId: null,
+              })
+            } else {
+              return createDedupedNotifications({
+                userIds: dispatcherIds,
+                type: "delay_alert",
+                message: `Trip delayed: ${alert.loadName ?? "Unknown load"} — ${alert.origin} → ${alert.destination} (${alert.hoursOverdue}h overdue)`,
+                tripId: alert.tripId,
+              })
+            }
+          })
+        )
+      ).catch(() => {})
     }
 
     return NextResponse.json(alerts)
