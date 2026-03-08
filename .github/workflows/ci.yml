@@ -9,10 +9,41 @@ on:
       - master
 
 jobs:
-  ci:
-    name: Lint, Typecheck & Build
+  build-validation:
+    name: Build Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build:ci
+        env:
+          POSTGRES_URL: postgresql://ci:ci@localhost:5432/ci
+          BETTER_AUTH_SECRET: ci-secret-placeholder-32-chars-ok
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          OPENROUTER_API_KEY: sk-or-v1-placeholder
+
+  code-format-validation:
+    name: Code Format Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
@@ -38,21 +69,33 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build
-        run: pnpm build:ci
-        env:
-          # Required by Next.js build — dummy values are fine for build-time checks
-          POSTGRES_URL: postgresql://ci:ci@localhost:5432/ci
-          BETTER_AUTH_SECRET: ci-secret-placeholder-32-chars-ok
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          OPENROUTER_API_KEY: sk-or-v1-placeholder
+  test-validation:
+    name: Test Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
-      # Unit tests — runs automatically once a test script is added to package.json
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Unit tests
         if: ${{ hashFiles('vitest.config.*') != '' }}
         run: pnpm test --run
 
-      # E2E tests — runs automatically once Playwright is configured
       - name: E2E tests
         if: ${{ hashFiles('playwright.config.*') != '' }}
         run: pnpm exec playwright test
