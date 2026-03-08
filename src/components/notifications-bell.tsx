@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,8 +32,8 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-function getLink(n: Notification, pathname: string): string | null {
-  const isDriver = pathname.startsWith("/driver")
+function getLink(n: Notification): string | null {
+  const isDriver = typeof window !== "undefined" && window.location.pathname.startsWith("/driver")
   if (n.type === "trip_assigned" || n.type === "trip_updated" || n.type === "trip_cancelled") {
     if (!n.tripId) return null
     return isDriver ? `/driver/trips/${n.tripId}` : `/dispatch/trips/${n.tripId}`
@@ -46,7 +46,6 @@ function getLink(n: Notification, pathname: string): string | null {
 
 export function NotificationsBell() {
   const router = useRouter()
-  const pathname = usePathname()
   const [items, setItems] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
 
@@ -71,11 +70,8 @@ export function NotificationsBell() {
       await fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" })
       setItems((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
     }
-    const link = getLink(n, pathname)
-    if (link) {
-      setOpen(false)
-      router.push(link)
-    }
+    const link = getLink(n)
+    if (link) router.push(link)
   }
 
   async function handleOpen(isOpen: boolean) {
