@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: Unit & E2E Tests
+    name: Test Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
