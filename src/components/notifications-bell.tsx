@@ -18,6 +18,7 @@ type Notification = {
   type: string
   message: string
   tripId: string | null
+  actionUrl: string | null
   read: boolean
   createdAt: string
 }
@@ -69,6 +70,10 @@ export function NotificationsBell() {
     if (!n.read) {
       fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {})
       setItems((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item))
+    }
+    if (n.actionUrl) {
+      window.open(n.actionUrl, "_blank", "noopener,noreferrer")
+      return
     }
     const link = getLink(n)
     if (link) router.push(link)
