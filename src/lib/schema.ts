@@ -224,9 +224,10 @@ export const notifications = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    type: text("type").notNull(), // "trip_assigned" | "trip_updated" | "trip_cancelled"
+    type: text("type").notNull(), // "trip_assigned" | "trip_updated" | "trip_cancelled" | "sds_uploaded"
     message: text("message").notNull(),
     tripId: text("trip_id").references(() => trips.id, { onDelete: "set null" }),
+    actionUrl: text("action_url"),
     read: boolean("read").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

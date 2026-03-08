@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { chemicalLoads } from "@/lib/schema"
+import { chemicalLoads, trips, drivers, user } from "@/lib/schema"
 import { requireRole } from "@/lib/session"
 import { upload } from "@/lib/storage"
+import { createDedupedNotifications, getDispatcherUserIds } from "@/lib/notifications"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireRole(["admin"])
+    const { session } = await requireRole(["admin"])
+    const uploaderId = session.user.id
     const { id } = await params
 
     const formData = await req.formData()
@@ -28,10 +30,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const safeName = `sds-${id}-${Date.now()}.pdf`
     const result = await upload(buffer, safeName, "sds")
 
-    await db
+    const [load] = await db
       .update(chemicalLoads)
       .set({ sdsDocumentUrl: result.url })
       .where(eq(chemicalLoads.id, id))
+      .returning({ name: chemicalLoads.name })
+
+    // Fire-and-forget notifications to dispatchers + assigned drivers
+    if (load) {
+      const message = `SDS document uploaded for ${load.name}`
+      const actionUrl = result.url
+
+      getDispatcherUserIds().then(async (dispatcherIds) => {
+        // Get user IDs of drivers assigned to trips using this load
+        const assignedTrips = await db
+          .select({ userId: user.id })
+          .from(trips)
+          .innerJoin(drivers, eq(trips.driverId, drivers.id))
+          .innerJoin(user, eq(drivers.userId, user.id))
+          .where(eq(trips.loadId, id))
+
+        const driverUserIds = assignedTrips.map((r) => r.userId)
+        const allUserIds = [...new Set([...dispatcherIds, ...driverUserIds])].filter((uid) => uid !== uploaderId)
+
+        return createDedupedNotifications({
+          userIds: allUserIds,
+          type: "sds_uploaded",
+          message,
+          actionUrl,
+          dedupWindowHours: 24,
+        })
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ url: result.url })
   } catch {

@@ -16,6 +16,7 @@ type CreateNotificationOpts = {
   type: string
   message: string
   tripId?: string | null
+  actionUrl?: string | null
   dedupWindowHours?: number
 }
 
@@ -28,6 +29,7 @@ export async function createDedupedNotifications({
   type,
   message,
   tripId = null,
+  actionUrl = null,
   dedupWindowHours = 2,
 }: CreateNotificationOpts) {
   if (userIds.length === 0) return
@@ -52,6 +54,6 @@ export async function createDedupedNotifications({
   if (toNotify.length === 0) return
 
   await db.insert(notifications).values(
-    toNotify.map((userId) => ({ userId, type, message, tripId }))
+    toNotify.map((userId) => ({ userId, type, message, tripId, actionUrl }))
   )
 }
