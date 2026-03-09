@@ -14,9 +14,6 @@ drizzle/
 *.min.js
 *.min.css
 
-# Template (has its own formatting)
-create-agentic-app/
-
 # Cache
 .cache/
 
