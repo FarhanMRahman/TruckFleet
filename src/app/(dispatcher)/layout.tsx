@@ -6,7 +6,7 @@ export default async function DispatcherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRole(["dispatcher", "admin"]);
+  await requireRole(["dispatcher"]);
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
